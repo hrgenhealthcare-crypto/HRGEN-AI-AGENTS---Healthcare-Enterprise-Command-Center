@@ -1,91 +1,72 @@
-# Implementation Plan: Clean Minimalist UI/UX & 3D Flip Cards with AI Portraits
+# Implementation Plan — 3D Holographic Humanoid AI Assistant
 
-## Executive Overview
-This implementation executes a decisive cleanup of the application's UI/UX, eliminating distracting ticker banners and redundant dashboard sections to create a crisp, distraction-free environment. It introduces a physical **3D Card Flip Experience** for all Agent Pods:
-- **Front Face**: Full-bleed cinematic AI-generated portraits with modern glass typography and an intuitive "Tap to Flip" interaction.
-- **Back Face**: Complete technical specs, system prompt directives, telemetry metrics, and telephony action controls (Dial, WhatsApp, Evolve Prompt).
+## 1. Overview & Architectural Goal
+Upgrade the existing **HRGen Agentic AI** workspace with an interactive, production-grade **3D Holographic Humanoid AI Assistant** powered by **Three.js** while preserving all existing tabs (`Dashboard`, `Voice Call`, `Agent Team`, `WhatsApp`, `Leads`, `Analytics`), modals (`Train Agent`, `Bot Console`, `Settings`), and Apple Glassmorphism visual language.
 
----
-
-## User Review & Confirmed Decisions
-
-> [!IMPORTANT]
-> The following user preferences were confirmed:
-> - **Card Flip Interaction**: Tap or click card to flip with smooth 3D rotation (`rotateY: 180deg`).
-> - **Front Face Presentation**: Full-bleed cinematic portrait with bottom glass gradient overlay.
-> - **Header & Navigation Cleanup**: Clean navigation tabs only, removing all noisy tickers, duplicate banners, and clutter.
+Based on your selections:
+1. **Placement & Integration**: Available as a **floating assistant stage** across the workspace, embedded inside the **Executive Dashboard** hero showcase, and integrated directly inside the **Live Voice Call Console**.
+2. **Visual Style**: **Full upper-body android** with a recognizable sculpted head, readable visor face (blinking eyes, speech-driven articulated mouth/jaw, temple/ear status lights), neck, cybernetic torso with chest core, articulated upper/lower arms, and articulated hands with finger segments.
+3. **Action Scope**: Capable of **navigating workspace tabs**, **launching voice/swarm agents**, and **answering workspace queries** in both **Hindi (`hi-IN`)** and **English (`en-IN` / `en-US`)** via server-side Gemini AI with clearly labeled deterministic fallback when offline.
 
 ---
 
-## 1. UI/UX De-Cluttering & Minimalist Redesign
-
-### A. Header Modernization (`Header.tsx`)
-- **Remove Clutter**: Delete the top multi-line ticker bar with repetitive text ("5-Tier Multi-LLM · Gemini Flash · Groq Llama · Kokoro TTS", "<140ms Real-Time Voice", etc.).
-- **Retain Essential Navigation**:
-  - Brand Mark: `PODS 2026` with subtle emerald pulse.
-  - Clean Segmented Navigation: `Dashboard`, `Agent Studio`, `Voice Webphone`, `Multi-LLM`, `WhatsApp Suite`, `Lead Pipeline`, `Growth Engine` with gliding spring layout indicator (`layoutId="globalActiveNavPill"`).
-  - Clean Action: `Launch Live Call` and `PWA Install`.
-
-### B. Executive Dashboard Cleanup (`ExecutiveDashboardView.tsx`)
-- **Eliminate Redundant Lists**: Remove the duplicate bottom roster ("Active Agent Pods Fleet Status (10 Pods)") that was repeating the pod list.
-- **Unify Fleet Display**: Provide a single, breathtaking **Interactive 3D Flip Card Roster** showcasing the autonomous agents.
-
----
-
-## 2. 3D Flip Card Architecture (`AgentPodFlipCard.tsx`)
-
-```
-   ┌────────────────────────────────┐            ┌────────────────────────────────┐
-   │          FRONT FACE            │   CLICK    │           BACK FACE            │
-   │  Full-Bleed Cinematic AI Image │   ROTATE   │  Technical Specs & Telemetry   │
-   │                                │  ────────► │                                │
-   │  👩💼 [Dr. Ritu Verma]         │  ◄──────── │  • System Prompt Directive     │
-   │  "Senior Inbound Receptionist" │  rotateY   │  • Voice Engine (Kore Neural)  │
-   │                                │   (180°)   │  • 15-20 Words Brevity SLA     │
-   │  [Dial Voice]  [Tap to Flip ↻] │            │  • Turn Count & Satisfaction   │
-   └────────────────────────────────┘            └────────────────────────────────┘
-```
-
-### A. Front Face (Cinematic AI Portrait)
-- Full-bleed portrait framing (`aspect-[3/4]` or `h-[390px]`) with rounded-3xl corners.
-- Rich AI-generated visual portrait tailored to the pod persona (e.g. Dr. Ritu Verma, Rahul Sharma, Sophia Cloud Bot, Lucas Growth, etc.) with high-fidelity gradients and glass reflections.
-- Bottom glass gradient scrim (`from-[#030712] via-[#030712]/75 to-transparent`) displaying:
-  - Pod Name & Role in crisp display typography.
-  - Channel badge (`Voice Telephony`, `WhatsApp`, etc.) and satisfaction score.
-  - Quick action buttons: Instant Dial / Chat button and "Tap to Flip Specs ↻".
-
-### B. Back Face (Technical Specs & Controls)
-- Smooth 3D flip rotation using Framer Motion (`transformStyle: "preserve-3d"`, `rotateY: isFlipped ? 180 : 0`).
-- Rendered in dark obsidian glass (`#080e1a`) with emerald hairline border:
-  - System Prompt Directive & opening greeting in clean monospace.
-  - Telemetry KPIs (turns, satisfaction %, leads captured).
-  - Brevity limit and voice engine identity.
-  - Action Controls: "Dial Voice", "WhatsApp Gateway", "Evolve Prompt", and "Flip to Portrait ↺".
+## 2. Visual Design & Three.js Humanoid Rig (`src/components/Humanoid3DCanvas.tsx`)
+We will construct a multi-part hierarchical `THREE.Group` rig rendered with hardware/software-adaptive `THREE.WebGLRenderer` and `RoomEnvironment` PBR reflections:
+- **Materials & Shaders**:
+  - Translucent glass-like outer shell (`THREE.MeshPhysicalMaterial` with transmission/opacity, fresnel rim highlights, cyan `#22d3ee` and violet `#8b5cf6` emissive accents).
+  - Internal wireframe lattice and glowing neural core nodes inside the cranium and chest.
+  - Vertical holographic scanline sweep plane (`THREE.Mesh` + additive gradient material) and restrained floating particle field (`THREE.Points`) that coalesces during materialization and scatters during dismissal.
+- **Articulated Anatomy (`THREE.Group` Hierarchy)**:
+  - **Head & Readable Face Group**: Sculpted cranium, face visor plate, left/right emissive eyes (with periodic blink scale animation), articulated lower jaw / mouth light bar driven by real speech timing or Web Audio amplitude, and left/right ear/temple pulse indicators.
+  - **Neck & Upper Torso Group**: Cervical struts, collar armor, sculpted chest plates, and central multi-ring chest core.
+  - **Articulated Arms & Hands (Left & Right)**: Shoulder joints → upper arms → elbow joints → forearms → wrist joints → palm + 5 articulated multi-segment fingers per hand that gesture naturally while speaking, listening, or greeting.
+- **Interactive Camera & Transform**:
+  - Supports pinch-and-drag rotation (`rotationY`, `rotationX`), two-hand scale (`0.65x` to `1.55x`), pointer drag fallback, and an instant `Reset View` action.
 
 ---
 
-## 3. High-Quality AI Generated Portraits for Agent Fleet
+## 3. Six-State Lifecycle & Animation Engine
+The humanoid operates as an explicit state machine:
+`dormant` → `materializing` → `listening` → `processing` → `speaking` → `dismissing`
 
-We will generate and configure dedicated high-fidelity portrait assets for the agent roster:
-1. **Dr. Ritu Verma**: Warm, confident Indian executive female in contemporary glass enterprise office.
-2. **Rahul Sharma**: Energetic, high-velocity Indian male sales closer in dark navy suit with earphone.
-3. **Sophia Cloud Bot**: Sleek cyber glass holographic avatar with emerald ambient lighting.
-4. **Lucas Growth Engine**: Visionary SEO/GEO growth strategist with holographic analytics charts.
-5. **Swarn Agent**: Meticulous financial leakage auditor with dark gold & emerald accents.
-
-All portrait components will include responsive loading states and automatic fallback styling.
+1. **`dormant`**: Minimized floating launcher or sleeping hologram emitter; particles gently orbit; camera/mic loops remain idle unless explicitly armed.
+2. **`materializing` (~1.1s)**: Rapidly assembles the humanoid from scattered holographic particles while a bright cyan/violet vertical scan plane sweeps from base to crown, accompanied by a soft Web Audio materialization chime.
+3. **`listening`**: Natural chest breathing, subtle head micro-movements, periodic eye blinking, and a gentle cyan/violet pulse at the ear/temple indicators while capturing speech or awaiting input.
+4. **`processing`**: Restrained orbital light pattern across the visor, temple nodes, and chest core while `/api/jarvis/command` processes the query.
+5. **`speaking`**: Mouth/jaw and vocal light bars animate in real time using Web Audio API amplitude analysis (or speech synthesis boundary/envelope timing—explicitly labeled as amplitude/timing-driven rather than phoneme-accurate lip sync), paired with expressive forearm and hand articulation.
+6. **`dismissing` (~0.9s)**: Smoothly dissolves the humanoid back into rising cyan/violet particles with a soft dismissal tone after a configurable idle timeout (e.g., 15s / 30s / Never). **Auto-dissolve is strictly paused while the user is speaking, the mic is actively listening, or a task/response is running.**
 
 ---
 
-## 4. Step-by-Step Implementation Flow
+## 4. Voice, Sound & Experimental Snap Activation (`src/utils/hologramAudio.ts`)
+- **Explicit Microphone Control**: Dedicated **Enable Microphone / Listen** button using browser `SpeechRecognition` / `webkitSpeechRecognition` with seamless toggle between **Hindi (`hi-IN`)** and **English (`en-IN` / `en-US`)**, plus a reliable **Text Command Input** bar so users can always interact even if speech recognition is unsupported or permission is denied.
+- **Procedural Web Audio Synthesizer**:
+  - Soft crystalline chimes for **Activation**, **Command Confirmation**, and **Dismissal**, plus a global **Mute / Unmute** toggle.
+- **Optional Experimental Snap-Sound Activation**:
+  - Clearly labeled **Experimental Snap Activation** toggle with a **Sensitivity Slider** (`Low` to `High`) and a **2.5-second cooldown** to prevent false repeats.
+  - Uses a Web Audio `AnalyserNode` high-frequency transient detector (measuring sharp high-band energy spikes vs. rolling ambient floor) and transparently notes that loud claps or sharp transients may also trigger it.
 
-1. **Header & Navigation Streamlining**:
-   - Clean up `Header.tsx`, stripping out noisy ticker text and preserving pure, clean tab navigation.
-2. **Card Component (`AgentPodFlipCard.tsx`)**:
-   - Build reusable 3D flip card component with Framer Motion spring physics, front AI portrait, and back technical console.
-3. **Studio & Dashboard Integration**:
-   - Replace standard flat cards in `AgentStudioView.tsx` and `ExecutiveDashboardView.tsx` with the new 3D Flip Card component.
-   - Maintain the modal configuration workflow on the back face's "Configure" button.
-4. **Verification & Build**:
-   - Run `compile_applet` and `lint_applet` to confirm clean compilation.
-   - Verify 3D card flips across desktop and mobile touch devices.
+---
+
+## 5. Camera-Based Hand Gesture Tracking (`src/utils/handGestureTracker.ts`)
+- **MediaPipe Hand Landmarker Integration**:
+  - Uses `@mediapipe/tasks-vision` (`HandLandmarker` running locally on browser frames; zero video recording or external frame uploads).
+  - Activated only after clicking **Enable Camera Gestures**, with an instant **Camera Off** button and a live mini status badge showing **Tracking Status**, **Confidence %**, **Hold Progress Ring**, and **Recognized Gesture**.
+- **Supported Gestures & Equivalent UI Buttons**:
+  - **Open Palm (held for 450ms)** → `Activate` humanoid (when dormant).
+  - **Closed Fist (held for 500ms)** → `Dismiss` humanoid.
+  - **Single-Hand Pinch & Drag** → Smoothly rotate the 3D humanoid left/right/up/down.
+  - **Two-Hand Distance Pinch/Spread** → Scale the humanoid within sensible bounds (`0.65x`–`1.55x`).
+  - Every gesture has a matching 1-click UI button (`Activate`, `Listen`, `Stop Speaking`, `Dismiss`, `Reset View`, `Rotate/Zoom Reset`) for full accessibility without a camera.
+
+---
+
+## 6. Server-Side AI Brain & Honest Capabilities (`server.ts` & `JarvisHologramAvatar.tsx`)
+- **New/Enhanced Endpoint (`POST /api/jarvis/command`)**:
+  - Keeps `GEMINI_API_KEY` strictly server-side in `server.ts`.
+  - Accepts user speech/text and language preference (`hi-IN` or `en-IN`), returning structured JSON:
+    - `reply`: Natural spoken response in Hindi or English.
+    - `intent`: Optional workspace action (`navigate_tab`, `open_bot_console`, `open_train_modal`, `call_agent`, or `general_answer`) and target tab/agent.
+    - `mode`: `'live_gemini'` when `GEMINI_API_KEY` is configured, or `'simulated_fallback'` when running without an active key.
+- **Honest Capability Indicator**:
+  - Displays a clear, unboxed status indicator in the assistant HUD distinguishing **Live Gemini AI** vs. **Simulated Local Reply**, and **Speech-Amplitude Mouth Sync** so capabilities are 100% transparent.

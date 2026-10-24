@@ -5,6 +5,7 @@ import {
   Mail, Building2, Plus, Sparkles, TrendingUp, MessageSquare
 } from 'lucide-react';
 import { BusinessLead, LeadStage, AgentPod } from '../types';
+import { StarRingBackground } from './StarRingBackground';
 
 interface CrmManagerViewProps {
   leads: BusinessLead[];
@@ -40,50 +41,50 @@ export const CrmManagerView: React.FC<CrmManagerViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top CRM KPI Bar (Zero-Pill Discipline) */}
+      {/* Top CRM KPI Bar (Apple Glassmorphism + Two Rings & Stars) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 font-mono-numbers text-xs">
-        <div className="bg-[#0b1220]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
+        <div className="relative overflow-hidden apple-glass-card p-4 rounded-3xl">
+          <StarRingBackground variant="card" accentColor="#10b981" secondaryColor="#06b6d4" />
+          <div className="relative z-10 flex items-center justify-between text-slate-300 mb-1.5">
             <span className="font-sans text-[11px]">Total Pipeline</span>
-            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+            <DollarSign className="w-4 h-4 text-emerald-400" />
           </div>
-          <span className="text-xl sm:text-2xl font-bold text-white block font-display">
+          <span className="relative z-10 text-xl sm:text-2xl font-bold text-white block font-display">
             ₹{totalPipelineValue.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-emerald-400 block mt-0.5">Active Enterprise Pipeline</span>
         </div>
 
-        <div className="bg-[#0b1220]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
+        <div className="relative overflow-hidden apple-glass-card p-4 rounded-3xl">
+          <StarRingBackground variant="card" accentColor="#06b6d4" secondaryColor="#3b82f6" />
+          <div className="relative z-10 flex items-center justify-between text-slate-300 mb-1.5">
             <span className="font-sans text-[11px]">Total Leads</span>
-            <Users className="w-3.5 h-3.5 text-cyan-400" />
+            <Users className="w-4 h-4 text-cyan-400" />
           </div>
-          <span className="text-xl sm:text-2xl font-bold text-cyan-400 block font-display">
+          <span className="relative z-10 text-xl sm:text-2xl font-bold text-cyan-400 block font-display">
             {leads.length} Leads
           </span>
-          <span className="text-[10px] text-slate-400 block mt-0.5">Across All 10 Pods</span>
         </div>
 
-        <div className="bg-[#0b1220]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
+        <div className="relative overflow-hidden apple-glass-card p-4 rounded-3xl">
+          <StarRingBackground variant="card" accentColor="#22c55e" secondaryColor="#10b981" />
+          <div className="relative z-10 flex items-center justify-between text-slate-300 mb-1.5">
             <span className="font-sans text-[11px]">Deals Won</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
-          <span className="text-xl sm:text-2xl font-bold text-emerald-400 block font-display">
+          <span className="relative z-10 text-xl sm:text-2xl font-bold text-emerald-400 block font-display">
             {wonCount} Closed
           </span>
-          <span className="text-[10px] text-slate-400 block mt-0.5">+24.5% conversion</span>
         </div>
 
-        <div className="bg-[#0b1220]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
+        <div className="relative overflow-hidden apple-glass-card p-4 rounded-3xl">
+          <StarRingBackground variant="card" accentColor="#a855f7" secondaryColor="#06b6d4" />
+          <div className="relative z-10 flex items-center justify-between text-slate-300 mb-1.5">
             <span className="font-sans text-[11px]">Avg Response</span>
-            <Clock className="w-3.5 h-3.5 text-violet-400" />
+            <Clock className="w-4 h-4 text-violet-400" />
           </div>
-          <span className="text-xl sm:text-2xl font-bold text-violet-400 block font-display">
+          <span className="relative z-10 text-xl sm:text-2xl font-bold text-violet-400 block font-display">
             &lt;140ms
           </span>
-          <span className="text-[10px] text-violet-300 block mt-0.5">Instant Pod Engagement</span>
         </div>
       </div>
 

@@ -36,12 +36,62 @@ export interface PromptEvolutionLog {
   performanceScore: number;
 }
 
+export interface AgentFaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface AgentTrainingConfig {
+  podId: string;
+  hermesEnabled: boolean;
+  voiceProfile: 'english' | 'hindi_soft';
+  faqs: AgentFaqItem[];
+  businessRules: string[];
+  lastTrainedAt: string;
+}
+
+export interface PlatformSystemSettings {
+  primaryLlmEngine: 'gemini-3.8-flash' | 'multi-llm-5tier';
+  voiceSynthesisEngine: 'gemini-neural-tts' | 'kokoro-82m-hybrid';
+  defaultVoiceProfile: 'english' | 'hindi_soft';
+  targetLatencyMs: number;
+  defaultBrevityWords: number;
+  globalHermesAutoLearn: boolean;
+  autoCreateCrmLead: boolean;
+  whatsappAutoDispatch: boolean;
+  webhookEndpointUrl: string;
+  updatedAt: string;
+}
+
+export type AgentBotModality =
+  | 'voice_pod'
+  | 'whatsapp_bot'
+  | 'swarm_cli'
+  | 'browser_bot'
+  | 'lucas_optimizer'
+  | 'ads_meta_google'
+  | 'seo_geo_aeo'
+  | 'branding_bot';
+
+export type AppNavTab =
+  | 'dashboard'
+  | 'studio'
+  | 'copilot'
+  | 'crm'
+  | 'whatsapp'
+  | 'marketing'
+  | 'multillm'
+  | 'analytics';
+
 export interface AgentPod {
   id: string;
   name: string;
   title: string;
   role: AgentRoleType;
   channel: AgentChannel;
+  botModality?: AgentBotModality;
+  cliCommand?: string;
   avatar: string;
   voiceId: 'Kore' | 'Puck' | 'Zephyr' | 'Fenrir' | 'Aoede';
   systemPrompt: string;
@@ -52,6 +102,7 @@ export interface AgentPod {
   knowledgeBaseSummary: string;
   evolutionVersion?: number;
   evolutionHistory?: PromptEvolutionLog[];
+  trainingConfig?: AgentTrainingConfig;
   stats: {
     interactions: number;
     satisfaction: string;
@@ -110,6 +161,9 @@ export interface CallLogItem {
   duration: string;
   timestamp: string;
   sentiment: 'positive' | 'neutral' | 'interested' | 'converted';
+  sentimentScore?: number;
+  flaggedForReview?: boolean;
+  routingReason?: string;
   summary: string;
   leadCaptured: boolean;
   messages: CallMessage[];
@@ -165,7 +219,7 @@ export interface SeoGeoOptimization {
   targetKeywords: string[];
   schemaMarkupJson: string;
   citationPrompts: string[];
-  localCitations: { name: string; status: 'Verified' | 'Pending' }[];
+  localCitations: { name: string; status: 'Verified' | 'Pending' | string }[];
 }
 
 export interface BusinessAuditReport {
@@ -177,4 +231,36 @@ export interface BusinessAuditReport {
   calculatedROAS: string;
   bottlenecks: string[];
   actionItems: { priority: 'High' | 'Medium'; recommendation: string }[];
+}
+
+export interface RagMemoryItem {
+  id: string;
+  podId: string;
+  type: 'objection_resolved' | 'customer_insight' | 'closing_technique' | 'faq_knowledge';
+  title: string;
+  content: string;
+  impactScore: number;
+  learnedFromCallId?: string;
+  timestamp: string;
+}
+
+export interface HermesSelfImproverProfile {
+  podId: string;
+  version: number;
+  totalLearningsApplied: number;
+  accuracyImprovement: string;
+  activePromptTuningRules: string[];
+  lastAutoEvolution: string;
+}
+
+export interface AgentPerformanceMetric {
+  podId: string;
+  podName: string;
+  role: string;
+  callsHandled: number;
+  convertedCalls: number;
+  conversionRate: number; // percentage e.g. 74.5
+  avgDurationSecs: number;
+  trendingRank?: number;
+  trendVelocity?: string; // e.g. '+34%'
 }

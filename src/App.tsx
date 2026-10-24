@@ -8,23 +8,41 @@ import { WhatsAppSuiteView } from './components/WhatsAppSuiteView';
 import { CrmManagerView } from './components/CrmManagerView';
 import { GrowthManagerView } from './components/GrowthManagerView';
 import { MultiLlmDashboard } from './components/MultiLlmDashboard';
+import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
+import { AgentBotConsoleModal } from './components/AgentBotConsoleModal';
 import { NewLeadModal } from './components/NewLeadModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { MobileMoreSheet } from './components/MobileMoreSheet';
 import { SqlSchemaModal } from './components/SqlSchemaModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { AgentPod, BusinessLead, BusinessServiceOrProduct, LeadStage } from './types';
+import { ProductPricingDrawer } from './components/ProductPricingDrawer';
+import { InboundConciergeChat } from './components/InboundConciergeChat';
+import { RagMemoryInspector } from './components/RagMemoryInspector';
+import { AgentTrainingModal } from './components/AgentTrainingModal';
+import { SystemSettingsDrawer } from './components/SystemSettingsDrawer';
+import { StarRingBackground } from './components/StarRingBackground';
+import { JarvisHologramAvatar } from './components/JarvisHologramAvatar';
+import { AgentPod, BusinessLead, BusinessServiceOrProduct, LeadStage, AppNavTab } from './types';
 import { CheckCircle2 } from 'lucide-react';
 import { depthZoomViewVariant, cinematicSpring } from './utils/motionTransitions';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'studio' | 'copilot' | 'crm' | 'whatsapp' | 'marketing' | 'multillm'>('dashboard');
+  const [activeTab, setActiveTab] = useState<AppNavTab>('dashboard');
   const [pods, setPods] = useState<AgentPod[]>([]);
   const [activePodId, setActivePodId] = useState<string>('pod-01');
   const [leads, setLeads] = useState<BusinessLead[]>([]);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
+  const [isPricingDrawerOpen, setIsPricingDrawerOpen] = useState(false);
+  const [isRagInspectorOpen, setIsRagInspectorOpen] = useState(false);
+  const [ragInspectorPodId, setRagInspectorPodId] = useState('pod-01');
+  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
+  const [isTrainModalOpen, setIsTrainModalOpen] = useState(false);
+  const [trainingPod, setTrainingPod] = useState<AgentPod | null>(null);
+  const [isBotConsoleOpen, setIsBotConsoleOpen] = useState(false);
+  const [botConsolePod, setBotConsolePod] = useState<AgentPod | null>(null);
+  const [isJarvisOpen, setIsJarvisOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -138,12 +156,19 @@ export default function App() {
       serviceOfInterest: service.name,
       value: service.price,
       assignedPodId: 'pod-01',
-      assignedPodName: 'Dr. Ritu Verma (Inbound Reception)',
+      assignedPodName: 'Priya Sharma (Inbound Reception)',
       stage: 'won',
       notes: `Direct license activation for ${service.name}. TAT: ${service.tat}.`,
       source: 'web_chat',
     });
     showToast(`License Activated: ${service.name} (₹${service.price.toLocaleString('en-IN')})!`);
+  };
+
+  const handleConciergeEscalateToVoice = (podId: string, visitorName: string, _query: string) => {
+    setActivePodId(podId);
+    setActiveTab('copilot');
+    const matched = pods.find((p) => p.id === podId);
+    showToast(`Escalated inquiry from "${visitorName}" to ${matched?.name || 'Live Voice Agent'}.`);
   };
 
   const handleLaunchVoiceTest = (pod: AgentPod) => {
@@ -158,6 +183,11 @@ export default function App() {
     showToast(`Loaded "${pod.name}" into WhatsApp Gateway.`);
   };
 
+  const handleLaunchBotConsole = (pod: AgentPod) => {
+    setBotConsolePod(pod);
+    setIsBotConsoleOpen(true);
+  };
+
   const handleTriggerVoiceCall = (phone: string, name: string) => {
     setActiveTab('copilot');
     showToast(`Loaded ${name} (${phone}) into Voice Webphone.`);
@@ -168,8 +198,30 @@ export default function App() {
     showToast(`Opened WhatsApp chat for ${name} (${phone}).`);
   };
 
+  const handleOpenRagInspector = (podId?: string) => {
+    if (podId) setRagInspectorPodId(podId);
+    setIsRagInspectorOpen(true);
+  };
+
+  const handleOpenTrainModal = (targetPod?: AgentPod) => {
+    setTrainingPod(targetPod || pods[0] || null);
+    setIsTrainModalOpen(true);
+  };
+
+  const handlePodTrainedUpdate = (updatedPod: AgentPod) => {
+    setPods((prev) => prev.map((p) => (p.id === updatedPod.id ? updatedPod : p)));
+    setTrainingPod(updatedPod);
+  };
+
   return (
-    <div className="min-h-screen bg-[#030712] flex flex-col text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="relative min-h-screen bg-[#030712] flex flex-col text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+      {/* Fullscreen Ambient Two-Rings + Twinkling Stars Background */}
+      <StarRingBackground
+        variant="fullscreen"
+        accentColor="#10b981"
+        secondaryColor="#06b6d4"
+      />
+
       {/* Top Header */}
       <Header
         activeTab={activeTab}
@@ -177,6 +229,8 @@ export default function App() {
         onOpenQuickCall={() => setActiveTab('copilot')}
         onOpenNewLead={() => setIsNewLeadModalOpen(true)}
         onOpenSqlModal={() => setIsSqlModalOpen(true)}
+        onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
+        onOpenMoreMenu={() => setIsMoreSheetOpen(true)}
       />
 
       {/* Floating Toast Notification */}
@@ -199,7 +253,7 @@ export default function App() {
       <OfflineIndicator />
 
       {/* Main Viewport with Cinematic Depth-Zoom Transitions */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 md:pb-12 overflow-hidden">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 md:pb-12 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -218,6 +272,14 @@ export default function App() {
                 onOpenNewLeadModal={() => setIsNewLeadModalOpen(true)}
                 onOrderServiceDirect={handleOrderServiceDirect}
                 onOpenSqlModal={() => setIsSqlModalOpen(true)}
+                onLaunchVoiceTest={handleLaunchVoiceTest}
+                onLaunchWhatsAppTest={handleLaunchWhatsAppTest}
+                onLaunchBotConsole={handleLaunchBotConsole}
+                onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
+                onOpenRagInspector={handleOpenRagInspector}
+                onOpenSettingsDrawer={() => setIsSettingsDrawerOpen(true)}
+                onOpenTrainModal={handleOpenTrainModal}
+                onSummonJarvis={() => setIsJarvisOpen(true)}
               />
             )}
 
@@ -227,19 +289,23 @@ export default function App() {
                 pods={pods}
                 onLaunchVoiceTest={handleLaunchVoiceTest}
                 onLaunchWhatsAppTest={handleLaunchWhatsAppTest}
+                onLaunchBotConsole={handleLaunchBotConsole}
                 onCreatePod={handleCreatePod}
                 onUpdatePod={handleUpdatePod}
                 onDeletePod={handleDeletePod}
+                onOpenTrainModal={handleOpenTrainModal}
+                onOpenSettingsDrawer={() => setIsSettingsDrawerOpen(true)}
               />
             )}
 
-            {/* Tab 3: Voice Telephony Webphone (<140ms) */}
+            {/* Tab 3: Voice Telephony Webphone (<140ms) with Live Transcription Overlay */}
             {activeTab === 'copilot' && (
               <VoiceWebphone
                 pods={pods}
                 activePodId={activePodId}
                 onSelectPod={setActivePodId}
                 onLeadCreated={handleCreateLead}
+                onOpenRagInspector={handleOpenRagInspector}
               />
             )}
 
@@ -271,6 +337,11 @@ export default function App() {
             {activeTab === 'marketing' && (
               <GrowthManagerView />
             )}
+
+            {/* Tab 8: Real-Time Recharts Analytics Dashboard */}
+            {activeTab === 'analytics' && (
+              <AnalyticsDashboardView />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -296,30 +367,74 @@ export default function App() {
         onOpenMoreMenu={() => setIsMoreSheetOpen(true)}
       />
 
-      {/* Mobile More Sheet Drawer */}
+      {/* Universal Drawer Menu (Mobile & Desktop) */}
       <MobileMoreSheet
         isOpen={isMoreSheetOpen}
         onClose={() => setIsMoreSheetOpen(false)}
         activeTab={activeTab}
         onNavigateTab={setActiveTab}
         onOpenSqlModal={() => setIsSqlModalOpen(true)}
+        onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
+        onOpenSettingsDrawer={() => setIsSettingsDrawerOpen(true)}
+        onOpenTrainModal={() => handleOpenTrainModal(pods[0])}
       />
 
-      {/* Desktop Clean Footer (Zero-Pill Discipline) */}
-      <footer className="hidden md:block bg-[#050811] border-t border-white/10 py-6 mt-12 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-white font-display">PODS 2026 · AUTONOMOUS AGENT CORE</span>
-            <span className="text-slate-600">·</span>
-            <span>Universal Multi-Channel Voice & WhatsApp Enterprise Platform</span>
-          </div>
-          <div className="flex items-center gap-4 font-mono-numbers">
-            <span className="text-emerald-400">&lt;140ms Groq + Gemini 2.5 Flash + Kokoro TTS</span>
-            <span className="text-slate-600">·</span>
-            <span className="text-cyan-400">Progressive Web App Offline Ready</span>
-          </div>
-        </div>
-      </footer>
+      {/* Commercial Software Licenses & Pricing Slide-over Drawer */}
+      <ProductPricingDrawer
+        isOpen={isPricingDrawerOpen}
+        onClose={() => setIsPricingDrawerOpen(false)}
+        onOrderService={handleOrderServiceDirect}
+      />
+
+      {/* Global System, API & PWA Settings Drawer */}
+      <SystemSettingsDrawer
+        isOpen={isSettingsDrawerOpen}
+        onClose={() => setIsSettingsDrawerOpen(false)}
+      />
+
+      {/* Per-Agent Training (FAQs, SOP Rules & Hermes Skill) Modal */}
+      <AgentTrainingModal
+        isOpen={isTrainModalOpen}
+        onClose={() => setIsTrainModalOpen(false)}
+        pod={trainingPod}
+        pods={pods}
+        onSelectPod={(p) => setTrainingPod(p)}
+        onPodUpdated={handlePodTrainedUpdate}
+      />
+
+      {/* Multi-Modal Swarm CLI / TUI, Lucas Optimizer & Headless Browser Bot Console Modal */}
+      <AgentBotConsoleModal
+        isOpen={isBotConsoleOpen}
+        onClose={() => setIsBotConsoleOpen(false)}
+        pod={botConsolePod}
+        pods={pods}
+        onSelectPod={(p) => setBotConsolePod(p)}
+        onSwitchToVoice={handleLaunchVoiceTest}
+      />
+
+      {/* Floating Autonomous Inbound Triage AI Concierge Chatbot */}
+      <InboundConciergeChat
+        pods={pods}
+        onEscalateToVoice={handleConciergeEscalateToVoice}
+      />
+
+      {/* Hermes RAG Memory Inspector Modal */}
+      <RagMemoryInspector
+        isOpen={isRagInspectorOpen}
+        onClose={() => setIsRagInspectorOpen(false)}
+        podId={ragInspectorPodId}
+        pods={pods}
+      />
+
+      {/* Jarvis 3D Holographic Digital Human Assistant (Materializes & Auto-Vanishes After Command) */}
+      <JarvisHologramAvatar
+        mode="floating"
+        externalOpen={isJarvisOpen}
+        onCloseExternal={() => setIsJarvisOpen(false)}
+        onNavigateTab={setActiveTab}
+        onOpenTrainModal={() => handleOpenTrainModal(pods[0])}
+        onOpenBotConsole={() => handleLaunchBotConsole(pods[3] || pods[0])}
+      />
     </div>
   );
 }

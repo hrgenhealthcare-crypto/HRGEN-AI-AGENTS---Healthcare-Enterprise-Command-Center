@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',
-          name: 'PODS 2026 - Autonomous Multi-Channel AI Agent Core',
-          short_name: 'PODS 2026',
-          description: 'Next-gen 2026 Autonomous AI Agent Pods, Voice Webphone, WhatsApp automation, and Lead Engine.',
+          name: 'HRGen Agentic AI - Enterprise Workforce',
+          short_name: 'HRGen AI',
+          description: 'Enterprise AI Voice Telephony, Hermes Self-Improver Agents, WhatsApp Cloud Automation, and Lead CRM.',
           theme_color: '#030712',
           background_color: '#030712',
           display: 'standalone',
@@ -45,9 +45,11 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         },
         devOptions: {
-          enabled: false,
+          enabled: true,
+          type: 'module',
         },
       }),
     ],

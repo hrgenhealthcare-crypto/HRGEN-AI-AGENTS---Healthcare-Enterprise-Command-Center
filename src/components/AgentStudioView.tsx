@@ -5,29 +5,37 @@ import {
   Settings2, CheckCircle2, Sliders, Shield, Volume2, 
   Zap, Copy, Check, ArrowRight, Play, Edit3, Trash2,
   RefreshCw, FileCode2, Download, ArrowUpRight, ShieldCheck,
-  TrendingUp, Activity, Database
+  TrendingUp, Activity, Database, Brain
 } from 'lucide-react';
 import { AgentPod, AgentChannel, AgentRoleType, IndustryType, PromptEvolutionLog } from '../types';
 import { sharedElementSpring, modalBackdropVariants } from '../utils/motionTransitions';
+import { WorkingAgentFlipCard } from './WorkingAgentFlipCard';
+import { StarRingBackground } from './StarRingBackground';
 
 interface AgentStudioViewProps {
   pods: AgentPod[];
   onLaunchVoiceTest: (pod: AgentPod) => void;
   onLaunchWhatsAppTest: (pod: AgentPod) => void;
+  onLaunchBotConsole?: (pod: AgentPod) => void;
   onCreatePod: (newPod: Partial<AgentPod>) => void;
   onUpdatePod: (podId: string, updates: Partial<AgentPod>) => void;
   onDeletePod: (podId: string) => void;
+  onOpenTrainModal?: (pod: AgentPod) => void;
+  onOpenSettingsDrawer?: () => void;
 }
 
 export const AgentStudioView: React.FC<AgentStudioViewProps> = ({
   pods,
   onLaunchVoiceTest,
   onLaunchWhatsAppTest,
+  onLaunchBotConsole,
   onCreatePod,
   onUpdatePod,
   onDeletePod,
+  onOpenTrainModal,
+  onOpenSettingsDrawer,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'voice' | 'whatsapp' | 'marketing' | 'operations'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'voice' | 'whatsapp' | 'swarm_bots' | 'marketing' | 'operations'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPod, setEditingPod] = useState<AgentPod | null>(null);
 
@@ -60,9 +68,10 @@ export const AgentStudioView: React.FC<AgentStudioViewProps> = ({
 
   const filteredPods = pods.filter((p) => {
     if (selectedCategory === 'all') return true;
-    if (selectedCategory === 'voice') return p.channel === 'voice' || p.channel === 'omnichannel';
-    if (selectedCategory === 'whatsapp') return p.channel === 'whatsapp' || p.channel === 'omnichannel';
-    if (selectedCategory === 'marketing') return p.role.includes('Marketing') || p.role.includes('SEO') || p.role.includes('Branding');
+    if (selectedCategory === 'voice') return p.id === 'pod-01' || p.id === 'pod-02' || p.channel === 'voice';
+    if (selectedCategory === 'whatsapp') return p.id === 'pod-03' || p.channel === 'whatsapp';
+    if (selectedCategory === 'swarm_bots') return p.id !== 'pod-01' && p.id !== 'pod-02' && p.id !== 'pod-03';
+    if (selectedCategory === 'marketing') return p.role.includes('Marketing') || p.role.includes('SEO') || p.role.includes('Branding') || p.role.includes('Designer');
     if (selectedCategory === 'operations') return p.role.includes('Auditor') || p.role.includes('Operations') || p.role.includes('Google');
     return true;
   });
@@ -239,72 +248,75 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-teal-400 uppercase tracking-wider mb-1">
+      {/* Top Apple Glass Header (Name and Tab Name Only) */}
+      <div className="relative overflow-hidden apple-glass-card text-white p-5 sm:p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <StarRingBackground variant="card" accentColor="#06b6d4" secondaryColor="#10b981" />
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1 font-mono">
             <Bot className="w-4 h-4" />
-            <span>10 Autonomous Agent Pods Fleet</span>
+            <span>Agent Workspace</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-            Universal Multi-Channel Agent Studio
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight font-display">
+            Agent Team
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Configure system prompts, select voice engines (Kore, Fenrir, Zephyr, Puck), and run the Victor/Hermes autonomous prompt self-evolution loop across Voice, WhatsApp, and Web channels.
-          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <button
-            onClick={handleOpenSqlModal}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors"
-          >
-            <Database className="w-4 h-4 text-emerald-400" />
-            <span>SQL Schema (RLS)</span>
-          </button>
+        <div className="relative z-10 flex flex-wrap items-center gap-2.5 shrink-0">
+          {onOpenTrainModal && pods.length > 0 && (
+            <button
+              onClick={() => onOpenTrainModal(pods[0])}
+              className="px-3.5 py-2.5 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 min-h-[44px]"
+            >
+              <Brain className="w-4 h-4 text-cyan-400" />
+              <span>Train & Hermes Skill</span>
+            </button>
+          )}
 
-          <button
-            onClick={handleOpenFastApiSheet}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors"
-          >
-            <FileCode2 className="w-4 h-4 text-teal-400" />
-            <span>FastAPI VoIP Sheet</span>
-          </button>
+          {onOpenSettingsDrawer && (
+            <button
+              onClick={onOpenSettingsDrawer}
+              className="px-3.5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 min-h-[44px]"
+            >
+              <Settings2 className="w-4 h-4 text-emerald-400" />
+              <span>API & Settings</span>
+            </button>
+          )}
 
           <button
             onClick={openCreateModal}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
+            className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all active:scale-95 min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
-            <span>Create Custom Pod</span>
+            <span>New Agent</span>
           </button>
         </div>
       </div>
 
       {evolutionSuccessNotice && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-2xl flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{evolutionSuccessNotice}</span>
         </div>
       )}
 
-      {/* Category Tabs Bar */}
+      {/* Category Filter Tabs */}
       <div className="bg-[#0b1220]/80 backdrop-blur-xl p-3 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-1.5 overflow-x-auto">
-          <span className="text-slate-400 font-semibold px-2 font-mono">Fleet Category:</span>
           {[
-            { id: 'all', label: 'All 10 Pods' },
-            { id: 'voice', label: 'Voice Telephony' },
-            { id: 'whatsapp', label: 'WhatsApp Suite' },
-            { id: 'marketing', label: 'SEO & Growth' },
-            { id: 'operations', label: 'Operations & Audit' },
+            { id: 'all', label: 'All Fleet (10)' },
+            { id: 'voice', label: 'Voice Agents (2)' },
+            { id: 'whatsapp', label: 'WhatsApp Bot (1)' },
+            { id: 'swarm_bots', label: 'Swarm CLI / Browser / Lucas Bots (7)' },
+            { id: 'marketing', label: 'Meta/Google Ads & SEO/GEO' },
+            { id: 'operations', label: 'Lucas Audit & E-Com Ops' },
           ].map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id as any)}
-              className={`min-h-[36px] px-3.5 py-1.5 rounded-xl font-medium transition-all active:scale-95 ${
+              className={`min-h-[36px] px-3.5 py-1.5 rounded-xl font-medium transition-all active:scale-95 whitespace-nowrap ${
                 selectedCategory === cat.id
-                  ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-md shadow-emerald-500/10'
+                  ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm shadow-emerald-500/10'
                   : 'bg-white/5 text-slate-300 hover:bg-white/10'
               }`}
             >
@@ -314,152 +326,34 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
         </div>
 
         <div className="text-slate-400 text-[11px] px-2 font-mono tabular-nums">
-          {filteredPods.length} / 10 Autonomous Agents Active
+          {filteredPods.length} Agents Active
         </div>
       </div>
 
-      {/* 10 Agent Pods Grid with Shared Element Motion */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* 3D Interactive Flip Cards Grid with Framer Motion Sparkline */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {filteredPods.map((pod) => (
-          <motion.div
+          <WorkingAgentFlipCard
             key={pod.id}
-            layoutId={`pod-card-container-${pod.id}`}
-            transition={sharedElementSpring}
-            whileHover={{ y: -4 }}
-            className="bg-[#0b1220]/80 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-xl hover:border-emerald-500/40 transition-all flex flex-col justify-between group"
-          >
-            <div>
-              {/* Header: Avatar, Name, and Unboxed Status Metadata (Zero-Pill Discipline) */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <motion.div 
-                    layoutId={`pod-avatar-${pod.id}`}
-                    transition={sharedElementSpring}
-                    className="w-12 h-12 rounded-2xl bg-[#050811] border border-white/10 flex items-center justify-center text-2xl shadow-inner shrink-0 group-hover:scale-105 transition-transform"
-                  >
-                    {pod.avatar}
-                  </motion.div>
-                  <div>
-                    <motion.h3 
-                      layoutId={`pod-name-${pod.id}`}
-                      transition={sharedElementSpring}
-                      className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors font-display"
-                    >
-                      {pod.name}
-                    </motion.h3>
-                    <motion.span 
-                      layoutId={`pod-title-${pod.id}`}
-                      transition={sharedElementSpring}
-                      className="text-[11px] text-slate-400 block leading-tight font-medium"
-                    >
-                      {pod.title}
-                    </motion.span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-xs font-semibold text-emerald-400 block">
-                    Active
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono tabular-nums">
-                    v{pod.evolutionVersion || 1}.0
-                  </span>
-                </div>
-              </div>
-
-              {/* Zero-Pill Unboxed Metadata separated by dots */}
-              <div className="text-xs text-slate-400 flex items-center flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-white/10 font-mono text-[11px]">
-                <span className="capitalize font-semibold text-emerald-400">
-                  {pod.channel.replace('_', ' ')}
-                </span>
-                <span aria-hidden="true" className="text-slate-600">·</span>
-                <span>{pod.industryFocus}</span>
-                <span aria-hidden="true" className="text-slate-600">·</span>
-                <motion.span layoutId={`pod-voice-${pod.id}`} transition={sharedElementSpring} className="text-cyan-400 font-medium">
-                  {pod.voiceId} Audio
-                </motion.span>
-                <span aria-hidden="true" className="text-slate-600">·</span>
-                <span>{pod.brevityWordsLimit}w Cap</span>
-              </div>
-
-              {/* Greeting Bubble Preview */}
-              <div className="mt-3 p-3 rounded-2xl bg-[#050811]/70 border border-white/5 text-xs text-slate-300 italic">
-                "{pod.greeting}"
-              </div>
-
-              {/* Telemetry Metrics */}
-              <div className="mt-3.5 grid grid-cols-3 gap-2 py-2 border-y border-white/10 text-center font-mono tabular-nums">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-sans">Turns</span>
-                  <span className="font-bold text-white text-xs">{pod.stats.interactions}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-sans">Satisfaction</span>
-                  <span className="font-bold text-emerald-400 text-xs">{pod.stats.satisfaction}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-sans">Leads Won</span>
-                  <span className="font-bold text-cyan-400 text-xs">{pod.stats.leadsCaptured}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions & Self-Evolution Controls */}
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => openEditModal(pod)}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-                  title="Configure Agent Pod"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-
-                {/* Trigger Victor/Hermes Continuous Evolution */}
-                <button
-                  onClick={() => handleTriggerEvolution(pod)}
-                  className="min-h-[44px] px-3 py-2 bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition-colors"
-                  title="Run Victor/Hermes Prompt Evolution Loop"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Evolve Prompt</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {(pod.channel === 'voice' || pod.channel === 'omnichannel') && (
-                  <button
-                    onClick={() => onLaunchVoiceTest(pod)}
-                    className="min-h-[44px] px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-                  >
-                    <PhoneCall className="w-3.5 h-3.5" />
-                    <span>Dial Voice</span>
-                  </button>
-                )}
-                {(pod.channel === 'whatsapp' || pod.channel === 'omnichannel') && (
-                  <button
-                    onClick={() => onLaunchWhatsAppTest(pod)}
-                    className="min-h-[44px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>WhatsApp</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
+            pod={pod}
+            onStartCall={onLaunchVoiceTest}
+            onStartWhatsApp={onLaunchWhatsAppTest}
+            onLaunchBotConsole={onLaunchBotConsole}
+            onEvolvePrompt={handleTriggerEvolution}
+            onTrainAgent={onOpenTrainModal}
+          />
         ))}
       </div>
 
-      {/* Victor/Hermes Self-Evolution Results Bench Modal */}
+      {/* Hermes Self-Evolution Results Bench Modal (Dark Obsidian Glass) */}
       {(isEvolving || evolutionResult) && activeEvolutionPod && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-[#0b1220] text-slate-100 rounded-3xl p-6 shadow-2xl border border-emerald-500/30 max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-base text-slate-900">
-                  Victor/Hermes Self-Evolving Engine Bench
+                <Sparkles className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-base text-white font-display">
+                  Hermes Self-Evolving Prompt Engine
                 </h3>
               </div>
               <button
@@ -467,7 +361,7 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
                   setEvolutionResult(null);
                   setIsEvolving(false);
                 }}
-                className="text-slate-400 hover:text-slate-600 font-bold p-1"
+                className="text-slate-400 hover:text-white font-bold p-1"
               >
                 ✕
               </button>
@@ -475,36 +369,36 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
 
             {isEvolving ? (
               <div className="py-12 flex flex-col items-center justify-center space-y-3 text-center">
-                <RefreshCw className="w-8 h-8 text-teal-600 animate-spin" />
-                <h4 className="font-bold text-sm text-slate-800">
-                  Recursive Micro-Prompting in Progress...
+                <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin" />
+                <h4 className="font-bold text-sm text-white">
+                  Hermes Recursive Prompt Optimization in Progress...
                 </h4>
-                <p className="text-xs text-slate-500 max-w-md">
-                  Gemini Flash is analyzing conversational bottlenecks, AHT latency stats, and objection handling to autonomously rewrite {activeEvolutionPod.name}'s instructions.
+                <p className="text-xs text-slate-400 max-w-md">
+                  Synthesizing call bottlenecks, custom FAQs, and AHT latency stats to autonomously refine {activeEvolutionPod.name}&apos;s instructions.
                 </p>
               </div>
             ) : evolutionResult && (
               <div className="space-y-4 text-xs">
-                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center justify-between">
+                <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between">
                   <div>
-                    <span className="font-bold text-teal-900 block">
-                      Evolution Succeeded · Version {evolutionResult.version}.0
+                    <span className="font-bold text-emerald-300 block">
+                      Hermes Evolution Succeeded · Version {evolutionResult.version}.0
                     </span>
-                    <span className="text-[11px] text-teal-700">
+                    <span className="text-[11px] text-slate-300">
                       {evolutionResult.reasoning}
                     </span>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-base font-bold text-teal-800 font-mono tabular-nums">
+                    <span className="text-base font-bold text-emerald-400 font-mono tabular-nums">
                       {evolutionResult.performanceScore}%
                     </span>
-                    <span className="block text-[10px] text-teal-600">Predicted Score</span>
+                    <span className="block text-[10px] text-slate-400">Accuracy Score</span>
                   </div>
                 </div>
 
                 <div>
-                  <span className="font-bold text-slate-700 block mb-1">Optimizations Implemented:</span>
-                  <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                  <span className="font-bold text-slate-200 block mb-1.5">Optimizations Applied:</span>
+                  <ul className="list-disc pl-5 space-y-1 text-slate-300">
                     {evolutionResult.optimizations.map((opt, i) => (
                       <li key={i}>{opt}</li>
                     ))}
@@ -513,20 +407,20 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
 
                 {/* Side-by-Side Prompt Diff */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <div className="p-3 bg-[#050811] rounded-2xl border border-white/10 space-y-1">
                     <span className="text-[10px] font-bold uppercase text-slate-400 block">
                       Previous Version (v{evolutionResult.version - 1}.0)
                     </span>
-                    <p className="text-[11px] text-slate-600 font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
+                    <p className="text-[11px] text-slate-400 font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
                       {evolutionResult.previousPrompt}
                     </p>
                   </div>
 
-                  <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-200 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-emerald-700 block">
+                  <div className="p-3 bg-emerald-950/30 rounded-2xl border border-emerald-500/30 space-y-1">
+                    <span className="text-[10px] font-bold uppercase text-emerald-300 block">
                       Evolved System Prompt (v{evolutionResult.version}.0 Active)
                     </span>
-                    <p className="text-[11px] text-slate-800 font-mono max-h-48 overflow-y-auto whitespace-pre-wrap font-medium">
+                    <p className="text-[11px] text-emerald-200 font-mono max-h-48 overflow-y-auto whitespace-pre-wrap font-medium">
                       {evolutionResult.evolvedPrompt}
                     </p>
                   </div>
@@ -537,9 +431,9 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
                     onClick={() => {
                       setEvolutionResult(null);
                     }}
-                    className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800"
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold rounded-xl text-xs hover:from-emerald-300 hover:to-teal-300"
                   >
-                    Close & Keep v{evolutionResult.version}.0 Active
+                    Keep v{evolutionResult.version}.0 Active
                   </button>
                 </div>
               </div>
@@ -729,7 +623,7 @@ Transfer rule: If complex, say: "Let me check this with the manager, please hold
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Dr. Ritu Verma"
+                      placeholder="e.g. Priya Sharma"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
                       className="p-2.5 rounded-xl border border-white/10 bg-[#050811] text-white focus:outline-none focus:border-emerald-400 font-sans"

@@ -369,22 +369,26 @@ export const CallHistorySection: React.FC<CallHistorySectionProps> = ({
                       </p>
 
                       <div className="flex items-center justify-between text-[10px] text-slate-400">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono tabular-nums">{call.timestamp}</span>
+                          {call.flaggedForReview && (
+                            <span className="text-[9px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-1.5 py-0.2 rounded">
+                              Flagged Review
+                            </span>
+                          )}
+                          {call.sentimentScore && (
+                            <span className="text-[9px] font-mono text-emerald-400">
+                              {call.sentimentScore}% mood
+                            </span>
+                          )}
                           {call.managerHandover && (
-                            <>
-                              <span aria-hidden="true">·</span>
-                              <span className="text-amber-600 font-medium">Transferred</span>
-                            </>
+                            <span className="text-amber-400 font-medium">Transferred</span>
                           )}
                           {call.leadCaptured && (
-                            <>
-                              <span aria-hidden="true">·</span>
-                              <span className="text-emerald-600 font-medium">Lead Captured</span>
-                            </>
+                            <span className="text-emerald-400 font-medium">Lead Saved</span>
                           )}
                         </div>
-                        <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isSelected ? 'text-teal-600 translate-x-0.5' : 'text-slate-300'}`} />
+                        <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isSelected ? 'text-teal-400 translate-x-0.5' : 'text-slate-500'}`} />
                       </div>
                     </div>
                   </button>
