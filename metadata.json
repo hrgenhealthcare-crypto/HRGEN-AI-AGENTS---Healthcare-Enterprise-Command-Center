@@ -1,0 +1,6 @@
+{
+  "name": "PODS 2026 - Autonomous Multi-Channel AI Agent Core",
+  "description": "Next-gen 2026 Autonomous AI Agent Pods, Voice Webphone, WhatsApp automation, and Lead Engine with 3D Holographic Visualizer.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
