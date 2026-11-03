@@ -153,7 +153,9 @@
   .hwt-mobile-flow .hwt-build-block,.hwt-mobile-flow .hwt-review-block{display:none!important}
   .hwt-mobile-review .hwt-build-block:not(.hwt-review-block),.hwt-mobile-review .hwt-flow-block{display:none!important}
   .hwt-mobile-build .hwt-flow-block,.hwt-mobile-build .hwt-review-block:not(.hwt-build-block){display:none!important}
-  .hwt-footer{padding:7px 13px;font-size:10px}
+  .hwt-footer{display:none}
+  .hwt-legend{display:none}
+  .hwt-flow-block .hwt-badge.dim{display:none}
 }
 @media(prefers-reduced-motion:reduce){.hwt-root *,.hwt-root *::before,.hwt-root *::after{animation:none!important;transition:none!important;transform:none!important}}
 
