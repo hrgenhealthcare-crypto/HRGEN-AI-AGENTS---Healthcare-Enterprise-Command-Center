@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
-  PhoneCall, Activity, Bot, LayoutDashboard, 
+  PhoneCall, Bot, LayoutDashboard, 
   MessageSquare, Users, Menu, BarChart3
 } from 'lucide-react';
 import { AppNavTab } from '../types';
+import { HRGenWordmark } from './HRGenWordmark';
 import { sharedElementSpring } from '../utils/motionTransitions';
 
 interface HeaderProps {
@@ -43,22 +44,20 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-[#050811]/95 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4 sm:gap-8 h-14 sm:h-16">
-          {/* Zone 1: Brand wordmark & logo */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          {/* Approved color split: HR solid black / Gen solid magenta. */}
+          <div className="flex shrink-0 items-center gap-2">
             <motion.button
-              whileTap={{ scale: 0.92 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => setActiveTab('dashboard')}
-              className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-600 to-cyan-500 hover:from-emerald-500 hover:to-cyan-400 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/20 transition-all"
-              title="HRGen Agentic AI Home"
+              className="rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E72D88]"
+              title="HRGen dashboard"
+              aria-label="HRGen dashboard"
             >
-              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <HRGenWordmark compact />
             </motion.button>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className="text-left font-bold text-base sm:text-lg tracking-tight text-white whitespace-nowrap hover:text-emerald-400 transition-colors font-display"
-            >
-              HRGen Agentic AI
-            </button>
+            <span className="hidden sm:inline text-[10px] font-semibold tracking-[.12em] uppercase text-[#C4B6EA]">
+              Agentic AI
+            </span>
           </div>
 
           {/* Zone 2: Navigation Links for desktop */}
@@ -71,17 +70,17 @@ export const Header: React.FC<HeaderProps> = ({
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative px-2.5 py-1.5 rounded-xl whitespace-nowrap transition-colors flex items-center gap-1.5 text-xs lg:text-sm font-medium ${
-                    isActive ? 'text-emerald-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+                    isActive ? 'text-[#F7B3D6] font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="globalActiveNavPill"
                       transition={sharedElementSpring}
-                      className="absolute inset-0 bg-emerald-500/15 border border-emerald-500/30 rounded-xl -z-10 shadow-sm shadow-emerald-500/20"
+                      className="absolute inset-0 bg-[#6D4CB4]/25 border border-[#A184E6]/50 rounded-xl -z-10 shadow-sm shadow-[#6D4CB4]/20"
                     />
                   )}
-                  <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'text-emerald-400 stroke-[2.2] scale-110' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'text-[#EFB8DB] stroke-[2.2] scale-110' : 'text-slate-400'}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -93,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
             <motion.button
               whileTap={{ scale: 0.94 }}
               onClick={onOpenQuickCall}
-              className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 text-xs font-semibold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-xl hover:from-emerald-300 hover:to-teal-200 transition-all shadow-md shadow-emerald-500/20 whitespace-nowrap min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 text-xs font-bold text-white bg-[#E72D88] rounded-xl hover:bg-[#C81E6D] hover:-translate-y-0.5 transition-all shadow-md shadow-[#E72D88]/20 whitespace-nowrap min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             >
               <PhoneCall className="w-4 h-4" />
               <span>Launch Live Call</span>
@@ -106,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors"
                 title="Drawer Menu, Settings, Pricing & PWA Install"
               >
-                <Menu className="w-4 h-4 text-emerald-400" />
+                <Menu className="w-4 h-4 text-[#E7C9FC]" />
               </motion.button>
             )}
           </div>
