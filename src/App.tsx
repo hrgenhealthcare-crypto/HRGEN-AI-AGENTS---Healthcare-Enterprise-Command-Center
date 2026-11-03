@@ -24,7 +24,7 @@ import { StarRingBackground } from './components/StarRingBackground';
 import { WorkflowTwinView } from './components/WorkflowTwinView';
 import { JarvisHologramAvatar } from './components/JarvisHologramAvatar';
 import { AgentPod, BusinessLead, BusinessServiceOrProduct, LeadStage, AppNavTab } from './types';
-import { CheckCircle2, GitBranch } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { depthZoomViewVariant, cinematicSpring } from './utils/motionTransitions';
 
 export default function App() {
@@ -229,22 +229,13 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickCall={() => setActiveTab('copilot')}
+        onOpenWorkflowTwin={() => setIsWorkflowTwinOpen(true)}
         onOpenNewLead={() => setIsNewLeadModalOpen(true)}
         onOpenSqlModal={() => setIsSqlModalOpen(true)}
         onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
         onOpenMoreMenu={() => setIsMoreSheetOpen(true)}
       />
 
-      {/* Visual-first, draft-only Workflow Twin. This does not call live backends. */}
-      <button
-        type="button"
-        onClick={() => setIsWorkflowTwinOpen(true)}
-        className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 flex items-center gap-2 rounded-2xl border border-[#823B5D]/50 bg-[#24141B] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-[#E72D88]/20 transition-all hover:-translate-y-1 hover:bg-[#3C1828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E72D88]"
-        aria-label="Open HRGen Workflow Twin architecture builder"
-      >
-        <GitBranch className="h-4 w-4 text-[#E72D88]" />
-        Workflow Twin
-      </button>
       {isWorkflowTwinOpen && <WorkflowTwinView onClose={() => setIsWorkflowTwinOpen(false)} />}
 
       {/* Floating Toast Notification */}
