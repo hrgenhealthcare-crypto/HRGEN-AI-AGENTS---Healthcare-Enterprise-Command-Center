@@ -10,7 +10,7 @@ on:
       - 'src/components/HRGenWordmark.tsx'
       - 'src/components/Header.tsx'
       - 'src/utils/workflowTwin.ts'
-      - 'tests/workflowTwin*.test.ts'
+      - 'tests/workflowTwin*'
       - 'public/brand/**'
       - '.github/workflows/workflow-twin-checks.yml'
 
@@ -34,3 +34,21 @@ jobs:
         run: npm run lint
       - name: Frontend production build
         run: npm run build
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Mobile and desktop browser smoke
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/hrgen-preview.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/workflowTwin.browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workflow-twin-qa-screenshots
+          path: artifacts/workflow-twin/
+          if-no-files-found: warn
