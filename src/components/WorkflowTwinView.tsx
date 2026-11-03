@@ -7,6 +7,7 @@ import {
   type ModuleId
 } from '../utils/workflowTwin';
 import './WorkflowTwinView.css';
+import { HRGenWordmark } from './HRGenWordmark';
 
 type Props = { onClose: () => void };
 const stageColumns = STAGES.map((stage,index)=>({stage,x:25+index*228}));
@@ -89,7 +90,7 @@ export function WorkflowTwinView({onClose}:Props) {
   return <div className="hwt-root" role="dialog" aria-modal="true" aria-label="HRGen Workflow Twin">
     <div className="hwt-shell">
       <header className="hwt-top">
-        <div className="hwt-logo">HR<span>Gen</span></div>
+        <HRGenWordmark compact className="hwt-wordmark" />
         <div className="hwt-head-title"><strong>Workflow Twin</strong><small>Visual-first architecture composer · Draft sandbox</small></div>
         <div className="hwt-mode" role="group" aria-label="Workflow view">
           <button className={view==='customer'?'is-active':''} onClick={()=>setView('customer')}>Customer</button>
