@@ -45,6 +45,17 @@ try{
   desktop.on('pageerror',error=>problems.push('desktop pageerror: '+error.message));
   await openTwin(desktop);
   await desktop.locator('.hwt-scroller').waitFor({state:'visible'});
+  const desktopLayout=await desktop.evaluate(()=>{
+    const el=document.querySelector('.hwt-scroller');
+    const root=document.querySelector('.hwt-root');
+    const rect=el?.getBoundingClientRect();
+    return {width:window.innerWidth,mobileQuery:window.matchMedia('(max-width:640px)').matches,
+      rootClass:root?.className,graphDisplay:el?getComputedStyle(el).display:'missing',
+      graphHeight:rect?.height||0};
+  });
+  console.log('DESKTOP_LAYOUT_METRICS:',JSON.stringify(desktopLayout));
+  assert.equal(desktopLayout.mobileQuery,false);
+  assert.ok(desktopLayout.graphHeight>150,'Desktop graph must remain visible and have meaningful height');
   await desktop.screenshot({path:'artifacts/workflow-twin/04-desktop-wide-board.png'});
   assert.equal(await desktop.getByRole('tab',{name:'Build'}).isVisible(),false,'Mobile-only tabs should be hidden on desktop');
   await desktop.close();
