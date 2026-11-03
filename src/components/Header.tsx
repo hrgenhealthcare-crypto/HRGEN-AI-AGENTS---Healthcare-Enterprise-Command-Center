@@ -77,10 +77,10 @@ export const Header: React.FC<HeaderProps> = ({
                     <motion.div
                       layoutId="globalActiveNavPill"
                       transition={sharedElementSpring}
-                      className="absolute inset-0 bg-[#6D4CB4]/25 border border-[#A184E6]/50 rounded-xl -z-10 shadow-sm shadow-[#6D4CB4]/20"
+                      className="absolute inset-0 bg-[#52152F]/25 border border-[#E72D88]/50 rounded-xl -z-10 shadow-sm shadow-[#52152F]/20"
                     />
                   )}
-                  <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'text-[#EFB8DB] stroke-[2.2] scale-110' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'text-[#FFAFD2] stroke-[2.2] scale-110' : 'text-slate-400'}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors"
                 title="Drawer Menu, Settings, Pricing & PWA Install"
               >
-                <Menu className="w-4 h-4 text-[#E7C9FC]" />
+                <Menu className="w-4 h-4 text-[#F7D8E7]" />
               </motion.button>
             )}
           </div>
