@@ -1,0 +1,36 @@
+name: Workflow Twin safe-copy checks
+
+on:
+  push:
+    branches: [feature/hrgen-workflow-twin-mvp]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/WorkflowTwinView*'
+      - 'src/components/HRGenWordmark.tsx'
+      - 'src/components/Header.tsx'
+      - 'src/utils/workflowTwin.ts'
+      - 'tests/workflowTwin*.test.ts'
+      - 'public/brand/**'
+      - '.github/workflows/workflow-twin-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Workflow Twin regression
+        run: npx tsx --test tests/workflowTwin.test.ts tests/workflowTwinBrand.test.ts
+      - name: TypeScript verification
+        run: npm run lint
+      - name: Frontend production build
+        run: npm run build
