@@ -239,10 +239,10 @@ export default function App() {
       <button
         type="button"
         onClick={() => setIsWorkflowTwinOpen(true)}
-        className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 flex items-center gap-2 rounded-2xl border border-fuchsia-400/40 bg-[#2b1742] px-4 py-3 text-xs font-bold text-fuchsia-100 shadow-xl shadow-fuchsia-900/20 transition-all hover:-translate-y-1 hover:bg-[#442358] focus-visible:outline focus-visible:outline-2 focus-visible:outline-fuchsia-300"
+        className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 flex items-center gap-2 rounded-2xl border border-[#A58BDB]/50 bg-[#29213F] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-[#6D4CB4]/20 transition-all hover:-translate-y-1 hover:bg-[#42315E] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E72D88]"
         aria-label="Open HRGen Workflow Twin architecture builder"
       >
-        <GitBranch className="h-4 w-4 text-fuchsia-300" />
+        <GitBranch className="h-4 w-4 text-[#E72D88]" />
         Workflow Twin
       </button>
       {isWorkflowTwinOpen && <WorkflowTwinView onClose={() => setIsWorkflowTwinOpen(false)} />}
