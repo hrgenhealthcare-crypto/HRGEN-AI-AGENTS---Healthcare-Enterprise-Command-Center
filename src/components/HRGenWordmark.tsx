@@ -1,10 +1,10 @@
 import React from 'react';
 
 /**
- * Locked HRGen typographic identity.
- * HR = solid near-black, Gen = solid magenta, on an opaque white tile.
- * No gradients, color blending, emoji icon or theme-inherited text colors.
- * Replace with an approved vector asset only after source verification.
+ * Reuses the original HRGen wordmark cropped from the existing user Library
+ * asset "HRGen Healthcare Digital Brand Identity.png".
+ * The original artwork is preserved; this is not a new text-logo.
+ * This implementation is isolated from all third-party design systems.
  */
 export function HRGenWordmark({
   compact = false,
@@ -14,15 +14,15 @@ export function HRGenWordmark({
   className?: string;
 }) {
   return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-xl border border-[#e8e7ed] bg-white ${compact ? 'min-h-9 px-2.5 py-1' : 'min-h-10 px-3 py-1.5'} shadow-sm ${className}`}
-      aria-label="HRGen"
-      role="img"
-    >
-      <span className={`font-black tracking-[-0.055em] leading-none ${compact ? 'text-lg' : 'text-xl'}`}>
-        <span className="text-[#111111]">HR</span>
-        <span className="text-[#E72D88]">Gen</span>
-      </span>
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white ${compact ? 'px-2 py-1' : 'px-3 py-1.5'} ${className}`}>
+      <img
+        src="/brand/hrgen-wordmark-original-crop.webp"
+        alt="HRGen"
+        width={compact ? 120 : 160}
+        height={compact ? 29 : 38}
+        className="block h-auto w-[120px] object-contain sm:w-[148px]"
+        draggable={false}
+      />
     </span>
   );
 }
