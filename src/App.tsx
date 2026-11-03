@@ -216,12 +216,12 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030712] flex flex-col text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="relative min-h-screen bg-[#080709] flex flex-col text-slate-100 antialiased selection:bg-[#E72D88]/30 selection:text-white">
       {/* Fullscreen Ambient Two-Rings + Twinkling Stars Background */}
       <StarRingBackground
         variant="fullscreen"
-        accentColor="#10b981"
-        secondaryColor="#06b6d4"
+        accentColor="#E72D88"
+        secondaryColor="#FFFFFF"
       />
 
       {/* Top Header */}
@@ -239,7 +239,7 @@ export default function App() {
       <button
         type="button"
         onClick={() => setIsWorkflowTwinOpen(true)}
-        className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 flex items-center gap-2 rounded-2xl border border-[#A58BDB]/50 bg-[#29213F] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-[#6D4CB4]/20 transition-all hover:-translate-y-1 hover:bg-[#42315E] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E72D88]"
+        className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 flex items-center gap-2 rounded-2xl border border-[#823B5D]/50 bg-[#24141B] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-[#E72D88]/20 transition-all hover:-translate-y-1 hover:bg-[#3C1828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E72D88]"
         aria-label="Open HRGen Workflow Twin architecture builder"
       >
         <GitBranch className="h-4 w-4 text-[#E72D88]" />
@@ -255,9 +255,9 @@ export default function App() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={cinematicSpring}
-            className="fixed bottom-20 md:bottom-5 right-5 z-50 bg-[#0b1220] text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/30 flex items-center gap-2.5 text-xs"
+            className="fixed bottom-20 md:bottom-5 right-5 z-50 bg-[#0b1220] text-white px-4 py-3 rounded-2xl shadow-2xl border border-[#E72D88]/30 flex items-center gap-2.5 text-xs"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#E72D88] shrink-0" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
