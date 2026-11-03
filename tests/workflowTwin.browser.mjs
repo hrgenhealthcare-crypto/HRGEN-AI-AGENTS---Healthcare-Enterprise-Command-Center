@@ -63,6 +63,10 @@ try{
 
   assert.equal(desktopLayout.mobileQuery,false);
   assert.ok(desktopLayout.graphHeight>150,'Desktop graph must remain visible and have meaningful height');
+  const graphPanel=await desktop.locator('.hwt-main > .hwt-card.hwt-flow-block').first().boundingBox();
+  assert.ok(graphPanel&&graphPanel.height>350,'Outer desktop graph panel collapsed, despite inner graph being present');
+  await desktop.locator('.hwt-scroller').scrollIntoViewIfNeeded();
+  await desktop.locator('.hwt-scroller').screenshot({path:'artifacts/workflow-twin/05-desktop-graph-detail.png'});
   await desktop.screenshot({path:'artifacts/workflow-twin/04-desktop-wide-board.png'});
   assert.equal(await desktop.getByRole('tab',{name:'Build'}).isVisible(),false,'Mobile-only tabs should be hidden on desktop');
   await desktop.close();
