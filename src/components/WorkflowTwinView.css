@@ -156,3 +156,28 @@
   .hwt-footer{padding:7px 13px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.hwt-root *,.hwt-root *::before,.hwt-root *::after{animation:none!important;transition:none!important;transform:none!important}}
+
+/* Admin-only sales evidence composer. Links remain user-owned drafts. */
+.hwt-pitch-kit{background:#151115;border:1px solid #38242F;border-radius:14px;overflow:hidden}
+.hwt-pitch-kit>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:15px 16px;list-style:none}
+.hwt-pitch-kit>summary::-webkit-details-marker{display:none}
+.hwt-pitch-kit>summary>span:first-child{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:800;color:#fff}
+.hwt-pitch-kit>summary>span:last-child{font-size:11px;color:#DAB3C6}
+.hwt-pitch-kit[open]>summary{border-bottom:1px solid #38242F}
+.hwt-pitch-body{display:grid;gap:15px;padding:16px}
+.hwt-pitch-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.hwt-pitch-fields label,.hwt-pitch-message{display:grid;gap:6px;color:#F5E1EB;font-size:12px;font-weight:700;min-width:0}
+.hwt-pitch-fields input,.hwt-pitch-message textarea{width:100%;min-width:0;min-height:42px;outline:0;background:#0B090B;border:1px solid #583247;border-radius:10px;padding:10px 11px;color:white;font-size:13px}
+.hwt-pitch-fields input:focus,.hwt-pitch-message textarea:focus{border-color:#E72D88;box-shadow:0 0 0 2px #E72D8833}
+.hwt-pitch-message textarea{resize:vertical;line-height:1.5}
+.hwt-pitch-proof{background:#1E1419;border:1px solid #422534;padding:13px;border-radius:11px}
+.hwt-pitch-proof>strong{display:block;margin-bottom:10px;font-size:12px}
+.hwt-pitch-proof .hwt-pitch-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hwt-pitch-consent{display:flex;gap:9px;align-items:center;margin-top:12px;font-size:12px;line-height:1.5;cursor:pointer}
+.hwt-pitch-consent input{accent-color:#E72D88;width:17px;height:17px;flex-shrink:0}
+.hwt-pitch-warning{font-size:11px;color:#FFABCD;margin-top:9px}
+@media(max-width:640px){
+  .hwt-pitch-body{padding:13px}
+  .hwt-pitch-fields,.hwt-pitch-proof .hwt-pitch-fields{grid-template-columns:1fr}
+  .hwt-pitch-kit>summary{min-height:50px}
+}
