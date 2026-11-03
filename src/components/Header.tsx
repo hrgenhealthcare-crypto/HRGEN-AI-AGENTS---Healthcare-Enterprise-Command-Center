@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   PhoneCall, Bot, LayoutDashboard, 
-  MessageSquare, Users, Menu, BarChart3
+  MessageSquare, Users, Menu, BarChart3, GitBranch
 } from 'lucide-react';
 import { AppNavTab } from '../types';
 import { HRGenWordmark } from './HRGenWordmark';
@@ -12,6 +12,7 @@ interface HeaderProps {
   activeTab: AppNavTab;
   setActiveTab: (tab: AppNavTab) => void;
   onOpenQuickCall: () => void;
+  onOpenWorkflowTwin?: () => void;
   onOpenNewLead: () => void;
   onOpenSqlModal?: () => void;
   onOpenPricingDrawer?: () => void;
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   onOpenQuickCall,
+  onOpenWorkflowTwin,
   onOpenMoreMenu,
 }) => {
   interface NavTabItem {
@@ -42,8 +44,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-[#050811]/95 backdrop-blur-xl border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4 sm:gap-8 h-14 sm:h-16">
+      <div className="max-w-none mx-auto px-3 sm:px-5 lg:px-7">
+        <div className="flex items-center justify-between gap-2 sm:gap-5 h-14 sm:h-16">
           {/* Approved color split: HR solid black / Gen solid magenta. */}
           <div className="flex shrink-0 items-center gap-2">
             <motion.button
@@ -55,13 +57,13 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <HRGenWordmark compact />
             </motion.button>
-            <span className="hidden sm:inline text-[10px] font-semibold tracking-[.12em] uppercase text-[#C4B6EA]">
+            <span className="hidden sm:inline text-[10px] font-semibold tracking-[.12em] uppercase text-[#E6CFDA]">
               Agentic AI
             </span>
           </div>
 
           {/* Zone 2: Navigation Links for desktop */}
-          <nav className="hidden md:flex items-center gap-1.5 lg:gap-2.5 text-sm font-medium text-slate-300">
+          <nav className="hidden lg:flex items-center gap-1.5 lg:gap-2.5 text-sm font-medium text-slate-300">
             {navTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -88,14 +90,27 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Zone 3: Primary CTA & Drawer Menu Trigger */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {onOpenWorkflowTwin && (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.95 }}
+                onClick={onOpenWorkflowTwin}
+                aria-label="Open HRGen Workflow Twin architecture builder"
+                title="Workflow Twin"
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-xl border border-[#A84570] bg-[#351623] px-2.5 py-2 text-white transition-all hover:bg-[#5A1B39] hover:shadow-[0_0_0_3px_rgba(231,45,136,0.25)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E72D88]"
+              >
+                <GitBranch className="h-4 w-4 text-[#FF92C4]" />
+                <span className="hidden xl:inline text-xs font-bold">Build</span>
+              </motion.button>
+            )}
             <motion.button
               whileTap={{ scale: 0.94 }}
               onClick={onOpenQuickCall}
               className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 text-xs font-bold text-white bg-[#E72D88] rounded-xl hover:bg-[#C81E6D] hover:-translate-y-0.5 transition-all shadow-md shadow-[#E72D88]/20 whitespace-nowrap min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             >
               <PhoneCall className="w-4 h-4" />
-              <span>Launch Live Call</span>
+              <span className="hidden sm:inline">Live Call</span>
             </motion.button>
 
             {onOpenMoreMenu && (
