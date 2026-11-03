@@ -1,0 +1,54 @@
+name: Workflow Twin safe-copy checks
+
+on:
+  push:
+    branches: [feature/hrgen-workflow-twin-mvp]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/WorkflowTwinView*'
+      - 'src/components/HRGenWordmark.tsx'
+      - 'src/components/Header.tsx'
+      - 'src/utils/workflowTwin.ts'
+      - 'tests/workflowTwin*'
+      - 'public/brand/**'
+      - '.github/workflows/workflow-twin-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Workflow Twin regression
+        run: npx tsx --test tests/workflowTwin.test.ts tests/workflowTwinBrand.test.ts
+      - name: TypeScript verification
+        run: npm run lint
+      - name: Frontend production build
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Mobile and desktop browser smoke
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/hrgen-preview.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/workflowTwin.browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workflow-twin-qa-screenshots
+          path: artifacts/workflow-twin/
+          if-no-files-found: warn

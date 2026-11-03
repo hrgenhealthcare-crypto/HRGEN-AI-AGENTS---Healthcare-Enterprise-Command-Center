@@ -21,6 +21,7 @@ import { RagMemoryInspector } from './components/RagMemoryInspector';
 import { AgentTrainingModal } from './components/AgentTrainingModal';
 import { SystemSettingsDrawer } from './components/SystemSettingsDrawer';
 import { StarRingBackground } from './components/StarRingBackground';
+import { WorkflowTwinView } from './components/WorkflowTwinView';
 import { JarvisHologramAvatar } from './components/JarvisHologramAvatar';
 import { AgentPod, BusinessLead, BusinessServiceOrProduct, LeadStage, AppNavTab } from './types';
 import { CheckCircle2 } from 'lucide-react';
@@ -28,6 +29,7 @@ import { depthZoomViewVariant, cinematicSpring } from './utils/motionTransitions
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppNavTab>('dashboard');
+  const [isWorkflowTwinOpen, setIsWorkflowTwinOpen] = useState(false);
   const [pods, setPods] = useState<AgentPod[]>([]);
   const [activePodId, setActivePodId] = useState<string>('pod-01');
   const [leads, setLeads] = useState<BusinessLead[]>([]);
@@ -214,12 +216,12 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030712] flex flex-col text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="relative min-h-screen bg-[#080709] flex flex-col text-slate-100 antialiased selection:bg-[#E72D88]/30 selection:text-white">
       {/* Fullscreen Ambient Two-Rings + Twinkling Stars Background */}
       <StarRingBackground
         variant="fullscreen"
-        accentColor="#10b981"
-        secondaryColor="#06b6d4"
+        accentColor="#E72D88"
+        secondaryColor="#FFFFFF"
       />
 
       {/* Top Header */}
@@ -227,11 +229,14 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickCall={() => setActiveTab('copilot')}
+        onOpenWorkflowTwin={() => setIsWorkflowTwinOpen(true)}
         onOpenNewLead={() => setIsNewLeadModalOpen(true)}
         onOpenSqlModal={() => setIsSqlModalOpen(true)}
         onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
         onOpenMoreMenu={() => setIsMoreSheetOpen(true)}
       />
+
+      {isWorkflowTwinOpen && <WorkflowTwinView onClose={() => setIsWorkflowTwinOpen(false)} />}
 
       {/* Floating Toast Notification */}
       <AnimatePresence>
@@ -241,9 +246,9 @@ export default function App() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={cinematicSpring}
-            className="fixed bottom-20 md:bottom-5 right-5 z-50 bg-[#0b1220] text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/30 flex items-center gap-2.5 text-xs"
+            className="fixed bottom-20 md:bottom-5 right-5 z-50 bg-[#0b1220] text-white px-4 py-3 rounded-2xl shadow-2xl border border-[#E72D88]/30 flex items-center gap-2.5 text-xs"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#E72D88] shrink-0" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
