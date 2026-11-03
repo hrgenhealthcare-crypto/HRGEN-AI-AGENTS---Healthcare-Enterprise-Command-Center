@@ -21,13 +21,15 @@ import { RagMemoryInspector } from './components/RagMemoryInspector';
 import { AgentTrainingModal } from './components/AgentTrainingModal';
 import { SystemSettingsDrawer } from './components/SystemSettingsDrawer';
 import { StarRingBackground } from './components/StarRingBackground';
+import { WorkflowTwinView } from './components/WorkflowTwinView';
 import { JarvisHologramAvatar } from './components/JarvisHologramAvatar';
 import { AgentPod, BusinessLead, BusinessServiceOrProduct, LeadStage, AppNavTab } from './types';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, GitBranch } from 'lucide-react';
 import { depthZoomViewVariant, cinematicSpring } from './utils/motionTransitions';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppNavTab>('dashboard');
+  const [isWorkflowTwinOpen, setIsWorkflowTwinOpen] = useState(false);
   const [pods, setPods] = useState<AgentPod[]>([]);
   const [activePodId, setActivePodId] = useState<string>('pod-01');
   const [leads, setLeads] = useState<BusinessLead[]>([]);
@@ -232,6 +234,18 @@ export default function App() {
         onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
         onOpenMoreMenu={() => setIsMoreSheetOpen(true)}
       />
+
+      {/* Visual-first, draft-only Workflow Twin. This does not call live backends. */}
+      <button
+        type="button"
+        onClick={() => setIsWorkflowTwinOpen(true)}
+        className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 flex items-center gap-2 rounded-2xl border border-fuchsia-400/40 bg-[#2b1742] px-4 py-3 text-xs font-bold text-fuchsia-100 shadow-xl shadow-fuchsia-900/20 transition-all hover:-translate-y-1 hover:bg-[#442358] focus-visible:outline focus-visible:outline-2 focus-visible:outline-fuchsia-300"
+        aria-label="Open HRGen Workflow Twin architecture builder"
+      >
+        <GitBranch className="h-4 w-4 text-fuchsia-300" />
+        Workflow Twin
+      </button>
+      {isWorkflowTwinOpen && <WorkflowTwinView onClose={() => setIsWorkflowTwinOpen(false)} />}
 
       {/* Floating Toast Notification */}
       <AnimatePresence>
