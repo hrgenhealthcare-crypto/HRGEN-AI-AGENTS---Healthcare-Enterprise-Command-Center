@@ -54,6 +54,13 @@ try{
       graphHeight:rect?.height||0};
   });
   console.log('DESKTOP_LAYOUT_METRICS:',JSON.stringify(desktopLayout));
+  const panels=await desktop.evaluate(()=>[...document.querySelectorAll('.hwt-main > *')].map(el=>{
+    const rect=el.getBoundingClientRect();
+    const style=getComputedStyle(el);
+    return {cls:el.className,top:Math.round(rect.top),height:Math.round(rect.height),display:style.display,position:style.position};
+  }));
+  console.log('DESKTOP_PANEL_ORDER:',JSON.stringify(panels));
+
   assert.equal(desktopLayout.mobileQuery,false);
   assert.ok(desktopLayout.graphHeight>150,'Desktop graph must remain visible and have meaningful height');
   await desktop.screenshot({path:'artifacts/workflow-twin/04-desktop-wide-board.png'});
