@@ -8,6 +8,7 @@ import {
 } from '../utils/workflowTwin';
 import './WorkflowTwinView.css';
 import { HRGenWordmark } from './HRGenWordmark';
+import { WorkflowPitchKit } from './WorkflowPitchKit';
 
 type Props = { onClose: () => void };
 const stageColumns = STAGES.map((stage,index)=>({stage,x:25+index*228}));
@@ -211,6 +212,7 @@ export function WorkflowTwinView({onClose}:Props) {
             <div><b>Backend / n8n integration</b><small>No workflow publishing, secrets or webhooks in this frontend demo.</small></div>
             <div><b>Tenant deployment</b><small>Independent permissions, isolation and approval gates required.</small></div>
           </div></div>}
+          {view==='admin'&&<div className="hwt-review-block"><WorkflowPitchKit moduleNames={blueprint.modules.map(m=>m.label)} /></div>}
           <div className="hwt-mobile-view-toggle hwt-review-block" role="group" aria-label="Review access view">
             <button type="button" aria-pressed={view==='customer'} onClick={()=>setView('customer')}>Customer</button>
             <button type="button" aria-pressed={view==='admin'} onClick={()=>setView('admin')}>Super Admin</button>
