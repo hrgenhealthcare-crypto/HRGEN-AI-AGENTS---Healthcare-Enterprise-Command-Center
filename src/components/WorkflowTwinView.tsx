@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ArrowRight, Check, ChevronRight, Download, GitBranch, Plus, RotateCcw, Search, ShieldAlert, Sparkles, X } from 'lucide-react';
 import {
   EXTERNAL_GATES, MODULES, MODULE_BY_ID, PRESETS, STAGES,
@@ -38,9 +38,11 @@ export function WorkflowTwinView({onClose}:Props) {
   const filtered=MODULES.filter(m=>(m.label+' '+m.description).toLowerCase().includes(filter.toLowerCase()));
 
   useEffect(()=>{
+    const previousOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
     const key=(event:KeyboardEvent)=>{if(event.key==='Escape')onClose();};
     window.addEventListener('keydown',key);
-    return ()=>window.removeEventListener('keydown',key);
+    return ()=>{window.removeEventListener('keydown',key);document.body.style.overflow=previousOverflow;};
   },[onClose]);
 
   const resetValidation=()=>{setValidated(false);setSimulated(false);};
@@ -86,8 +88,6 @@ export function WorkflowTwinView({onClose}:Props) {
     setMessage('Draft JSON exported locally. No automation was deployed.');
   };
   const edges=blueprint.edges.filter(e=>positions.has(e.from)&&positions.has(e.to));
-  const yPoints=[...positions.values()];
-  const top=113;
   return <div className={"hwt-root hwt-mobile-"+mobileSection} role="dialog" aria-modal="true" aria-label="HRGen Workflow Twin">
     <div className="hwt-shell">
       <header className="hwt-top">
@@ -149,12 +149,12 @@ export function WorkflowTwinView({onClose}:Props) {
               <div className="hwt-graph" style={{height:graphHeight}}>
                 {stageColumns.map(s=><div className="hwt-stage-label" style={{left:s.x}} key={s.stage}>{s.stage}</div>)}
                 <svg width="1160" height={graphHeight} className="hwt-lines" aria-hidden="true">
-                  <defs><marker id="hwt-end-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6" fill="none" stroke="#a18bdf" strokeWidth="1.25"/></marker></defs>
+                  <defs><marker id="hwt-end-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6" fill="none" stroke="#E72D88" strokeWidth="1.25"/></marker></defs>
                   {edges.map(e=>{
                     const a=positions.get(e.from)!,b=positions.get(e.to)!;
                     const x1=a.x+184,x2=b.x,y1=a.y+37,y2=b.y+37;
                     const delta=Math.max(30,(x2-x1)*0.42);
-                    return <path key={e.from+':'+e.to} d={`M ${x1} ${y1} C ${x1+delta} ${y1}, ${x2-delta} ${y2}, ${x2} ${y2}`} fill="none" stroke={e.kind==='required'?'#ef6ab3':'#8274bd'} opacity=".77" strokeWidth={e.kind==='required'?2.2:1.5} markerEnd="url(#hwt-end-arrow)"/>;
+                    return <path key={e.from+':'+e.to} d={`M ${x1} ${y1} C ${x1+delta} ${y1}, ${x2-delta} ${y2}, ${x2} ${y2}`} fill="none" stroke={e.kind==='required'?'#E72D88':'#F8F6F7'} opacity=".77" strokeWidth={e.kind==='required'?2.2:1.5} markerEnd="url(#hwt-end-arrow)"/>;
                   })}
                 </svg>
                 {blueprint.modules.map(m=>{
