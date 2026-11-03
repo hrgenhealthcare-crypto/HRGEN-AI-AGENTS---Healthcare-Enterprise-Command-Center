@@ -207,16 +207,16 @@ export function WorkflowTwinView({onClose}:Props) {
               <p className="hwt-hint" role="status">{simulated?'✓ Local simulation complete · external operations blocked':'Simulation has not been run.'}</p>
             </div>
           </div>
+          <div className="hwt-mobile-view-toggle hwt-review-block" role="group" aria-label="Review access view">
+            <button type="button" aria-pressed={view==='customer'} onClick={()=>setView('customer')}>Customer</button>
+            <button type="button" aria-pressed={view==='admin'} onClick={()=>setView('admin')}>Super Admin</button>
+          </div>
           {view==='admin'&&<div className="hwt-card hwt-review-block"><div className="hwt-card-head"><strong><ShieldAlert size={17}/> Super Admin Design Review</strong></div><div className="hwt-admin">
             <div><b>12-agent registry</b><small>Different source repository. Current CEO/PM permission verification pending.</small></div>
             <div><b>Backend / n8n integration</b><small>No workflow publishing, secrets or webhooks in this frontend demo.</small></div>
             <div><b>Tenant deployment</b><small>Independent permissions, isolation and approval gates required.</small></div>
           </div></div>}
           {view==='admin'&&<div className="hwt-review-block"><WorkflowPitchKit moduleNames={blueprint.modules.map(m=>m.label)} /></div>}
-          <div className="hwt-mobile-view-toggle hwt-review-block" role="group" aria-label="Review access view">
-            <button type="button" aria-pressed={view==='customer'} onClick={()=>setView('customer')}>Customer</button>
-            <button type="button" aria-pressed={view==='admin'} onClick={()=>setView('admin')}>Super Admin</button>
-          </div>
           <div className="hwt-grid hwt-summary-grid">
             <div className="hwt-card hwt-build-block hwt-review-block"><div className="hwt-card-head"><strong>Selected Solution Stack</strong><span className="hwt-badge">{blueprint.modules.length} modules</span></div><div className="hwt-padding hwt-tags">
               {blueprint.modules.map(m=><span key={m.id}>{m.label}{blueprint.required.includes(m.id)?' · auto':''}</span>)}
