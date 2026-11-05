@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
+import { evaluateBusinessAudit } from './src/auditEngine';
 
 dotenv.config();
 
@@ -643,6 +644,16 @@ let callLogs = [
     ],
   },
 ];
+
+// Universal evidence-first audit: deterministic scoring only; no implied live data access.
+app.post('/api/audit/evaluate', (req, res) => {
+  try {
+    const report = evaluateBusinessAudit(req.body);
+    res.json({ success: true, mode: 'evidence_supplied', report });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error?.message || 'Invalid audit input' });
+  }
+});
 
 // --- REST API ENDPOINTS ---
 
