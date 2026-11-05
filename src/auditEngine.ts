@@ -37,7 +37,7 @@ export function evaluateBusinessAudit(input: AuditInput, now = new Date()) {
     throw new Error('Observations must be an array of at most 300');
   }
   const findings = input.observations.map((o, index) => {
-    if (!o || !(o.category in AUDIT_CATEGORIES) || !['pass', 'gap', 'not_applicable', 'unverified'].includes(o.status)) {
+    if (!o || !Object.prototype.hasOwnProperty.call(AUDIT_CATEGORIES, o.category) || !['pass', 'gap', 'not_applicable', 'unverified'].includes(o.status)) {
       throw new Error('Invalid observation at index ' + index);
     }
     const hasEvidence = !!(o.evidenceUrl && /^https:\/\//i.test(o.evidenceUrl) && o.observedAt && !Number.isNaN(Date.parse(o.observedAt)));
