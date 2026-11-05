@@ -147,21 +147,20 @@ export default function App() {
     }
   };
 
+  // Creating an inquiry must not imply verified payment, license provisioning or a won deal.
   const handleOrderServiceDirect = (service: BusinessServiceOrProduct) => {
     handleCreateLead({
-      name: 'Enterprise Client',
-      phone: '+91 98201 00000',
-      email: 'founder@enterprise.co',
-      company: 'Digital Growth Enterprise',
+      name: 'New service inquiry',
+      company: 'Pending client details',
       serviceOfInterest: service.name,
       value: service.price,
       assignedPodId: 'pod-01',
       assignedPodName: 'Priya Sharma (Inbound Reception)',
-      stage: 'won',
-      notes: `Direct license activation for ${service.name}. TAT: ${service.tat}.`,
+      stage: 'new',
+      notes: `Service inquiry only: ${service.name}. Payment, agreement and activation have NOT been verified.`,
       source: 'web_chat',
     });
-    showToast(`License Activated: ${service.name} (₹${service.price.toLocaleString('en-IN')})!`);
+    showToast(`Inquiry requested for "${service.name}". No payment or license activation has occurred.`);
   };
 
   const handleConciergeEscalateToVoice = (podId: string, visitorName: string, _query: string) => {
