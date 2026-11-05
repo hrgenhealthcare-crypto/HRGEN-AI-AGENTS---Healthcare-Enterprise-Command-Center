@@ -1658,8 +1658,8 @@ app.post('/api/leads', (req, res) => {
     const newLead = {
       id: `LEAD-${Date.now().toString().slice(-4)}`,
       name: name || 'Prospective Client',
-      phone: phone || '+91 98000 00000',
-      email: email || 'client@enterprise.com',
+      phone: typeof phone === 'string' ? phone.trim() : '',
+      email: typeof email === 'string' ? email.trim() : '',
       company: company || 'Private Enterprise',
       industry: industry || 'Universal Business',
       serviceOfInterest: serviceOfInterest || 'Enterprise Voice AI Telephony Seat',
@@ -1669,8 +1669,8 @@ app.post('/api/leads', (req, res) => {
       assignedPodName: assignedPodName || 'Priya Sharma (Inbound Reception)',
       notes: notes || 'Lead captured via HRGEN AI Agent Pod.',
       source: source || 'voice_agent',
-      createdAt: 'Just now',
-      lastContact: 'Just now',
+      createdAt: new Date().toISOString(),
+      lastContact: new Date().toISOString(),
     };
     businessLeads.unshift(newLead);
     res.json({ success: true, lead: newLead });
