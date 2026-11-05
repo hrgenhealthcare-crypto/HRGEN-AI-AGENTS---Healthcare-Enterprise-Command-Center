@@ -23,9 +23,11 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "https://ais-dev-vn7bfdpbqzkbflsu76ppob-488198938105.asia-southeast1.run.app",
         "https://ais-pre-vn7bfdpbqzkbflsu76ppob-488198938105.asia-southeast1.run.app",
-        "*"
     ]
     
+    VOICE_WEBHOOK_SHARED_SECRET: str = os.getenv("VOICE_WEBHOOK_SHARED_SECRET", "")
+    MAX_AUDIO_UPLOAD_BYTES: int = 10 * 1024 * 1024
+
     # Google Gemini AI Config
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = "gemini-3.8-flash"  # Supports gemini-3.8-flash or gemini-2.5-flash

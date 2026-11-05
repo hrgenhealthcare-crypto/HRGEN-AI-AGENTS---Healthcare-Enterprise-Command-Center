@@ -12,12 +12,14 @@ Orchestrates:
 """
 
 import time
+import secrets
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException, status
 from fastapi.responses import JSONResponse
 
+from backend.config import settings
 from backend.schemas.voice import (
     InboundTranscriptPayload,
     VoiceActionResponse,
@@ -57,6 +59,13 @@ async def voice_webhook(
     - If Content-Type is 'application/json', parses InboundTranscriptPayload.
     - If Content-Type is 'multipart/form-data', reads audio_file and transcribes via Groq Whisper.
     """
+    # Fail closed until a secret is provisioned by the deployment operator.
+    if not settings.VOICE_WEBHOOK_SHARED_SECRET:
+        raise HTTPException(status_code=503, detail="Voice ingress not configured")
+    supplied_secret = request.headers.get("x-hrgen-webhook-secret", "")
+    if not secrets.compare_digest(supplied_secret, settings.VOICE_WEBHOOK_SHARED_SECRET):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     total_start = time.perf_counter()
     latency_breakdown = {}
 
@@ -66,7 +75,7 @@ async def voice_webhook(
     active_call_id = call_id or f"call_{int(time.time()*1000)}"
     active_caller = caller_id or "Anonymous"
     active_pod = agent_pod_id or "pod_ritu_verma"
-    prompt_override = custom_system_prompt
+    prompt_override = None  # Untrusted caller may not change the system prompt
     min_words = brevity_min_words or 15
     max_words = brevity_max_words or 20
     transcript_text = ""
@@ -74,8 +83,10 @@ async def voice_webhook(
     try:
         if "multipart/form-data" in content_type and audio_file:
             # Mode A: Raw Audio Ingestion
-            logger.info(f"Received raw audio upload '{audio_file.filename}' for call {active_call_id}")
-            audio_bytes = await audio_file.read()
+            logger.info("Received raw audio upload for voice call")
+            audio_bytes = await audio_file.read(settings.MAX_AUDIO_UPLOAD_BYTES + 1)
+            if len(audio_bytes) > settings.MAX_AUDIO_UPLOAD_BYTES:
+                raise HTTPException(status_code=413, detail="Audio upload exceeds size limit")
             if not audio_bytes:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty audio file uploaded")
             
@@ -94,10 +105,10 @@ async def voice_webhook(
             active_caller = payload.caller_id
             active_pod = payload.agent_pod_id
             transcript_text = payload.transcript.strip()
-            prompt_override = payload.custom_system_prompt
+            prompt_override = None  # Never accept caller-controlled system instructions
             min_words = payload.brevity_min_words or 15
             max_words = payload.brevity_max_words or 20
-            logger.info(f"Received JSON transcript for call {active_call_id}: '{transcript_text}'")
+            logger.info("Received JSON transcript for voice call")
 
         else:
             # Fallback parsing attempt
@@ -184,13 +195,13 @@ async def voice_webhook(
         raise
     except Exception as exc:
         total_elapsed_ms = (time.perf_counter() - total_start) * 1000.0
-        logger.exception(f"Unhandled error in voice_webhook: {str(exc)}")
+        logger.exception("Unhandled error in voice webhook")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": "error",
                 "call_id": active_call_id,
-                "error": str(exc),
+                "error": "Internal processing error",
                 "total_elapsed_ms": round(total_elapsed_ms, 2)
             }
         )
