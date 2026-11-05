@@ -82,30 +82,15 @@ export const WhatsAppSuiteView: React.FC<WhatsAppSuiteViewProps> = ({
       direction: 'outbound',
       body: text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'delivered',
+      status: 'sent',
       attachmentType: attachment,
     };
 
     setMessages((prev) => [...prev, newMsg]);
     if (!textToSend) setInputText('');
 
-    // Simulate Client Reply after 2 seconds
-    setTimeout(() => {
-      setIsBotTyping(true);
-      setTimeout(() => {
-        setIsBotTyping(false);
-        const reply: WhatsAppMessage = {
-          id: `wa-client-${Date.now()}`,
-          phone: selectedLead.phone,
-          recipientName: selectedLead.name,
-          direction: 'inbound',
-          body: 'Thanks for the quick response! Sending this to our director to review the quote.',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'delivered',
-        };
-        setMessages((prev) => [...prev, reply]);
-      }, 1500);
-    }, 1000);
+    // Local preview only: do not fabricate an inbound message from a real prospect.
+
   };
 
   const dispatchTemplate = (type: 'demo' | 'proposal' | 'payment') => {
@@ -134,10 +119,10 @@ export const WhatsAppSuiteView: React.FC<WhatsAppSuiteViewProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-bold text-sm text-white font-display">WhatsApp Inbound & CRM</h3>
+            <h3 className="font-bold text-sm text-white font-display">WhatsApp Preview & CRM</h3>
           </div>
           <span className="text-[10px] text-emerald-400 font-mono font-bold">
-            Cloud API Active
+            Local Preview · Not Connected
           </span>
         </div>
 
@@ -184,7 +169,7 @@ export const WhatsAppSuiteView: React.FC<WhatsAppSuiteViewProps> = ({
                 </span>
               </div>
               <span className="text-[11px] text-emerald-400 font-mono">
-                {selectedLead.phone} · Active Meta API
+                {selectedLead.phone} · Local Sandbox
               </span>
             </div>
           </div>

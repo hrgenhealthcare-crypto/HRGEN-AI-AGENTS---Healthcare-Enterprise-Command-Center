@@ -1,0 +1,21 @@
+name: HRGen Launch Safety
+on:
+  pull_request:
+  push:
+    branches: [fix/launch-safety-audit-20261105]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run lint
+      - name: Universal audit regression tests
+        run: npm run test:audit
+      - name: Build
+        run: npm run build

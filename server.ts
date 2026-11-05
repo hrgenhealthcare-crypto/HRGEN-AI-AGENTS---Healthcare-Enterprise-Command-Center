@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
+import { evaluateBusinessAudit } from './src/auditEngine';
 
 dotenv.config();
 
@@ -643,6 +644,16 @@ let callLogs = [
     ],
   },
 ];
+
+// Universal evidence-first audit: deterministic scoring only; no implied live data access.
+app.post('/api/audit/evaluate', (req, res) => {
+  try {
+    const report = evaluateBusinessAudit(req.body);
+    res.json({ success: true, mode: 'evidence_supplied', report });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error?.message || 'Invalid audit input' });
+  }
+});
 
 // --- REST API ENDPOINTS ---
 
@@ -1647,8 +1658,8 @@ app.post('/api/leads', (req, res) => {
     const newLead = {
       id: `LEAD-${Date.now().toString().slice(-4)}`,
       name: name || 'Prospective Client',
-      phone: phone || '+91 98000 00000',
-      email: email || 'client@enterprise.com',
+      phone: typeof phone === 'string' ? phone.trim() : '',
+      email: typeof email === 'string' ? email.trim() : '',
       company: company || 'Private Enterprise',
       industry: industry || 'Universal Business',
       serviceOfInterest: serviceOfInterest || 'Enterprise Voice AI Telephony Seat',
@@ -1658,8 +1669,8 @@ app.post('/api/leads', (req, res) => {
       assignedPodName: assignedPodName || 'Priya Sharma (Inbound Reception)',
       notes: notes || 'Lead captured via HRGEN AI Agent Pod.',
       source: source || 'voice_agent',
-      createdAt: 'Just now',
-      lastContact: 'Just now',
+      createdAt: new Date().toISOString(),
+      lastContact: new Date().toISOString(),
     };
     businessLeads.unshift(newLead);
     res.json({ success: true, lead: newLead });
