@@ -195,7 +195,8 @@ RETURNS UUID AS $$
 BEGIN
     RETURN NULLIF(
         COALESCE(
-            auth.jwt() -> 'app_metadata' ->> 'tenant_id'
+            auth.jwt() -> 'app_metadata' ->> 'tenant_id',
+            auth.jwt() -> 'user_metadata' ->> 'tenant_id'
         ),
         ''
     )::UUID;
