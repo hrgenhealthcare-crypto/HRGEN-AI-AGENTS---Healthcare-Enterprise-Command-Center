@@ -1,0 +1,31 @@
+name: HRGen P0 CRM internal security gate
+on:
+  pull_request:
+    paths:
+      - 'server.ts'
+      - 'security/**'
+      - 'tests/internalApiGuard.test.ts'
+      - 'package.json'
+      - '.github/workflows/p0-crm-security.yml'
+  push:
+    branches:
+      - 'fix/p0-internal-crm-deny-by-default-20261108'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript verification
+        run: npm run lint
+      - name: CRM negative-access tests
+        run: npm run test:security
+      - name: Frontend production build
+        run: npm run build

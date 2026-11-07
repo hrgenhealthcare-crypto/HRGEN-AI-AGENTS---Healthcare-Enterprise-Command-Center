@@ -5,7 +5,7 @@ import { ExecutiveDashboardView } from './components/ExecutiveDashboardView';
 import { AgentStudioView } from './components/AgentStudioView';
 import { VoiceWebphone } from './components/VoiceWebphone';
 import { WhatsAppSuiteView } from './components/WhatsAppSuiteView';
-import { CrmManagerView } from './components/CrmManagerView';
+import { StaffCrmPortal } from './components/StaffCrmPortal';
 import { GrowthManagerView } from './components/GrowthManagerView';
 import { MultiLlmDashboard } from './components/MultiLlmDashboard';
 import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
@@ -324,13 +324,7 @@ export default function App() {
 
             {/* Tab 6: Universal Business CRM */}
             {activeTab === 'crm' && (
-              <CrmManagerView
-                leads={leads}
-                onUpdateLeadStage={handleUpdateLeadStage}
-                onOpenNewLeadModal={() => setIsNewLeadModalOpen(true)}
-                onTriggerCall={handleTriggerVoiceCall}
-                onTriggerWhatsApp={handleTriggerWhatsApp}
-              />
+              <StaffCrmPortal />
             )}
 
             {/* Tab 7: Growth Bots & SEO/GEO */}

@@ -6,6 +6,10 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
+import { requireInternalApiKey } from './security/internalApiGuard';
+import { staffVerifierFromEnvironment } from './security/staffJwt';
+import { createStaffCrmRouter, createSyntheticLeadStore } from './security/staffRoutes';
+import { quarantineUnverifiedWebhook } from './security/quarantineWebhook';
 
 dotenv.config();
 
@@ -16,6 +20,33 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json());
+
+// Staff CRM is a private, synthetic-data staging pilot.
+// Explicitly disabled in production until persistent RLS database + E2E acceptance.
+// It never bypasses the older backend-only /api/leads containment gate.
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/staff', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(503).json({ error: 'Staff CRM is not released' });
+  });
+} else {
+  app.use('/api/staff', createStaffCrmRouter(staffVerifierFromEnvironment(), createSyntheticLeadStore()));
+}
+
+/**
+ * P0 ENTERPRISE QUARANTINE. All legacy /api endpoints are server-to-server only.
+ * Missing internal secret => 503; missing/invalid provided secret => 401.
+ * This intentionally disables legacy browser-powered dashboards until every
+ * endpoint is migrated to authenticated, tenant-scoped staff RBAC.
+ * Not a production release gate; do not provide this secret to browser clients.
+ * The /api/staff authenticated synthetic staging router is mounted above.
+ */
+app.use('/api', requireInternalApiKey);
+
+// No SIP/voice/WhatsApp callbacks until provider signatures are verified.
+// This protects Express /webhook routes. Audit separate Python/FastAPI
+// webhook services independently before exposing them.
+app.use('/webhook', quarantineUnverifiedWebhook);
 
 // Initialize GoogleGenAI server-side with telemetry header
 const ai = new GoogleGenAI({
@@ -1636,12 +1667,12 @@ app.get('/api/services', (_req, res) => {
 });
 
 // 6. Get CRM Leads
-app.get('/api/leads', (_req, res) => {
+app.get('/api/leads', requireInternalApiKey, (_req, res) => {
   res.json({ success: true, leads: businessLeads });
 });
 
 // 7. Create/Update CRM Lead
-app.post('/api/leads', (req, res) => {
+app.post('/api/leads', requireInternalApiKey, (req, res) => {
   try {
     const { name, phone, email, company, industry, serviceOfInterest, stage, value, assignedPodId, assignedPodName, notes, source } = req.body;
     const newLead = {
@@ -1669,7 +1700,7 @@ app.post('/api/leads', (req, res) => {
 });
 
 // 8. Update Lead Stage
-app.patch('/api/leads/:id', (req, res) => {
+app.patch('/api/leads/:id', requireInternalApiKey, (req, res) => {
   const { id } = req.params;
   const lead = businessLeads.find((l) => l.id === id);
   if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
