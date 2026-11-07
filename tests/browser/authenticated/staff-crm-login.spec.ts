@@ -65,7 +65,8 @@ async function tokenFor(request: APIRequestContext, email: string): Promise<stri
   return body.access_token;
 }
 
-test('signed lab A sales login, create, stage change, signout and reload', async ({page,request}) => {
+test('signed lab A sales login, create, stage change, signout and reload', async ({page,request}, testInfo) => {
+  const marker = 'E2E Synthetic A New Lead ' + testInfo.project.name;
   const pageErrors: string[] = [];
   page.on('pageerror', e=>pageErrors.push(e.message));
   await signIn(page,request,'a-sales@synthetic.invalid');
@@ -73,18 +74,18 @@ test('signed lab A sales login, create, stage change, signout and reload', async
   await expect(page.getByText('Tenant: '+tenantA)).toBeVisible();
   await expect(page.getByText('Synthetic Lab A baseline')).toBeVisible();
   await expect(page.getByText('Synthetic Lab B baseline')).toHaveCount(0);
-  await page.getByLabel('Synthetic lead name').fill('E2E Synthetic A New Lead');
+  await page.getByLabel('Synthetic lead name').fill(marker);
   await page.getByLabel('Company').fill('Synthetic Company A');
   await page.getByRole('button',{name:'Add demo lead'}).click();
-  await expect(page.getByText('E2E Synthetic A New Lead')).toBeVisible();
-  await page.getByText('E2E Synthetic A New Lead')
+  await expect(page.getByText(marker, {exact:true})).toBeVisible();
+  await page.getByText(marker, {exact:true})
     .locator('xpath=../..').locator('select').selectOption('contacted');
-  await expect(page.getByText('E2E Synthetic A New Lead')
+  await expect(page.getByText(marker, {exact:true})
     .locator('xpath=../..').locator('select')).toHaveValue('contacted');
 
   await page.getByRole('button',{name:'Sign out'}).click();
   await expect(page.getByRole('heading',{name:'Authorized staff sign in'})).toBeVisible();
-  await expect(page.getByText('E2E Synthetic A New Lead')).toHaveCount(0);
+  await expect(page.getByText(marker, {exact:true})).toHaveCount(0);
   expect(await page.evaluate(()=>localStorage.length)).toBe(0);
   await page.reload();
   await expect(page.getByRole('heading',{name:'Authorized staff sign in'})).toBeVisible();
