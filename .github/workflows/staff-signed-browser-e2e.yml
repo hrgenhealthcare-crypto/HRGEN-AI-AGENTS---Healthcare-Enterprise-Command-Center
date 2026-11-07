@@ -1,0 +1,50 @@
+name: HRGen Signed Staff Browser E2E
+on:
+  push:
+    branches:
+      - integration/security-crm-voice-20261108
+  pull_request:
+    paths:
+      - 'security/staffJwt.ts'
+      - 'security/staffRoutes.ts'
+      - 'src/components/StaffCrmPortal.tsx'
+      - 'src/main.tsx'
+      - 'tests/browser/authenticated/**'
+      - 'tests/browser/fixtures/**'
+      - 'playwright.auth.config.ts'
+      - 'package.json'
+      - '.github/workflows/staff-signed-browser-e2e.yml'
+permissions:
+  contents: read
+jobs:
+  signed-browser-e2e:
+    name: Synthetic signed JWT / desktop-mobile Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: TypeScript verification
+        run: npm run lint
+      - name: Build with synthetic browser-safe test identity provider URL
+        env:
+          VITE_SUPABASE_URL: https://synthetic-idp.invalid
+          VITE_SUPABASE_ANON_KEY: synthetic-public-only-non-production
+        run: npm run build
+      - name: Signed staff browser E2E on isolated loopback test harness
+        run: npx playwright test -c playwright.auth.config.ts
+      - name: Failure-only browser evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hrgen-synthetic-signed-browser-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
