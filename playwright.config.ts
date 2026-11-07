@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/browser',
+  testIgnore: '**/authenticated/**', // signed-user flow uses playwright.auth.config.ts only
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
