@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
+import { requireInternalApiKey } from './security/internalApiGuard';
 
 dotenv.config();
 
@@ -1636,12 +1637,12 @@ app.get('/api/services', (_req, res) => {
 });
 
 // 6. Get CRM Leads
-app.get('/api/leads', (_req, res) => {
+app.get('/api/leads', requireInternalApiKey, (_req, res) => {
   res.json({ success: true, leads: businessLeads });
 });
 
 // 7. Create/Update CRM Lead
-app.post('/api/leads', (req, res) => {
+app.post('/api/leads', requireInternalApiKey, (req, res) => {
   try {
     const { name, phone, email, company, industry, serviceOfInterest, stage, value, assignedPodId, assignedPodName, notes, source } = req.body;
     const newLead = {
@@ -1669,7 +1670,7 @@ app.post('/api/leads', (req, res) => {
 });
 
 // 8. Update Lead Stage
-app.patch('/api/leads/:id', (req, res) => {
+app.patch('/api/leads/:id', requireInternalApiKey, (req, res) => {
   const { id } = req.params;
   const lead = businessLeads.find((l) => l.id === id);
   if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
