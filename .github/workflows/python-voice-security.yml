@@ -17,11 +17,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile backend Python source
-        run: python -m compileall -q backend
-      - name: Voice ingress negative-access tests
-        run: python -m unittest discover -s backend/tests -p 'test_*.py' -v
       - name: Install backend dependencies
         run: pip install -r backend/requirements.txt
+      - name: Compile backend Python source
+        run: python -m compileall -q backend
+      - name: Full FastAPI + ingress negative-access tests
+        run: python -m unittest discover -s backend/tests -p 'test_*.py' -v
       - name: FastAPI import smoke
         run: python -c 'from backend.main import app; print("FastAPI voice service import OK")'
