@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
 import { requireInternalApiKey } from './security/internalApiGuard';
+import { staffVerifierFromEnvironment } from './security/staffJwt';
+import { createStaffCrmRouter, createSyntheticLeadStore } from './security/staffRoutes';
 
 dotenv.config();
 
@@ -17,6 +19,19 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json());
+
+// Staff CRM is a private, synthetic-data staging pilot.
+// Explicitly disabled in production until persistent RLS database + E2E acceptance.
+// It never bypasses the older backend-only /api/leads containment gate.
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/staff', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(503).json({ error: 'Staff CRM is not released' });
+  });
+} else {
+  app.use('/api/staff', createStaffCrmRouter(staffVerifierFromEnvironment(), createSyntheticLeadStore()));
+}
+
 
 // Initialize GoogleGenAI server-side with telemetry header
 const ai = new GoogleGenAI({
