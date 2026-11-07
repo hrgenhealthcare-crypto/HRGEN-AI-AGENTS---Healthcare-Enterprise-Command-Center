@@ -9,6 +9,7 @@ import { AgentPod } from './src/types';
 import { requireInternalApiKey } from './security/internalApiGuard';
 import { staffVerifierFromEnvironment } from './security/staffJwt';
 import { createStaffCrmRouter, createSyntheticLeadStore } from './security/staffRoutes';
+import { quarantineUnverifiedWebhook } from './security/quarantineWebhook';
 
 dotenv.config();
 
@@ -32,6 +33,20 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/api/staff', createStaffCrmRouter(staffVerifierFromEnvironment(), createSyntheticLeadStore()));
 }
 
+/**
+ * P0 ENTERPRISE QUARANTINE. All legacy /api endpoints are server-to-server only.
+ * Missing internal secret => 503; missing/invalid provided secret => 401.
+ * This intentionally disables legacy browser-powered dashboards until every
+ * endpoint is migrated to authenticated, tenant-scoped staff RBAC.
+ * Not a production release gate; do not provide this secret to browser clients.
+ * The /api/staff authenticated synthetic staging router is mounted above.
+ */
+app.use('/api', requireInternalApiKey);
+
+// No SIP/voice/WhatsApp callbacks until provider signatures are verified.
+// This protects Express /webhook routes. Audit separate Python/FastAPI
+// webhook services independently before exposing them.
+app.use('/webhook', quarantineUnverifiedWebhook);
 
 // Initialize GoogleGenAI server-side with telemetry header
 const ai = new GoogleGenAI({
