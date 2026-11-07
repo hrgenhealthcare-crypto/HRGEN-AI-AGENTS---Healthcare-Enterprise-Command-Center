@@ -60,7 +60,7 @@ async def voice_webhook(
     - If Content-Type is 'multipart/form-data', reads audio_file and transcribes via Groq Whisper.
     """
     # Fail closed until a secret is provisioned by the deployment operator.
-    if not settings.VOICE_WEBHOOK_SHARED_SECRET:
+    if len(settings.VOICE_WEBHOOK_SHARED_SECRET.encode('utf-8')) < 32:
         raise HTTPException(status_code=503, detail="Voice ingress not configured")
     supplied_secret = request.headers.get("x-hrgen-webhook-secret", "")
     if not secrets.compare_digest(supplied_secret, settings.VOICE_WEBHOOK_SHARED_SECRET):
