@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     
     VOICE_WEBHOOK_SHARED_SECRET: str = os.getenv("VOICE_WEBHOOK_SHARED_SECRET", "")
     MAX_AUDIO_UPLOAD_BYTES: int = 10 * 1024 * 1024
+    MAX_JSON_BODY_BYTES: int = 64 * 1024
 
     # Google Gemini AI Config
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
