@@ -40,9 +40,9 @@ class HandoverService:
         for pattern in self.compiled_patterns:
             match = pattern.search(cleaned)
             if match:
-                matched_phrase = match.group(0)
-                logger.info(f"Human escalation intent triggered on phrase: '{matched_phrase}'")
-                return True, f"Triggered by phrase: '{matched_phrase}'"
+                # Never log or echo caller speech (may include personal or clinical data).
+                logger.info("Human escalation intent detected")
+                return True, "Caller requested human assistance"
         return False, None
 
     def create_manager_handover_payload(
