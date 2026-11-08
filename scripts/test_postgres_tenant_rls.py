@@ -12,6 +12,7 @@ from pathlib import Path
 
 import psycopg
 from psycopg import errors
+from staging_readonly_preflight import collect_preflight, run_readonly
 
 BASE = Path("supabase/migrations")
 A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -363,6 +364,42 @@ def main():
             check(c.fetchone()[0]==0,
                   "direct DB RLS rejects stale JWT after tenant transfer")
             c.execute("RESET ROLE")
+
+            # Read-only staging preflight detects deliberately unresolved history.
+            before = run_readonly(conn)
+            check(before["status"] == "HOLD", "preflight fails closed on historic blockers")
+            check("unvalidated_tenant_pod_constraints" in before["blockers"],
+                  "preflight flags NOT VALID foreign keys")
+            check(before["aggregate_data_counts"].get("unscoped_llm_audit") == 1,
+                  "preflight flags unassigned synthetic transcript")
+            check(before["missing_tables"] == [], "preflight inventories all migrated tables")
+            check(before["membership_grants_expected"] is True,
+                  "preflight confirms browser privileges denied")
+            check(before["current_tenant_resolver_authoritative"] is True,
+                  "preflight identifies live membership-aware RLS resolver")
+
+            # Cleanup is intentionally only in this disposable CI database.
+            # The staging preflight module never deletes or alters anything.
+            c.execute("DELETE FROM public.llm_fallback_audit_logs WHERE tenant_id IS NULL")
+            for fk in (
+                "fk_leads_crm_tenant_assigned_pod",
+                "fk_agent_performance_tenant_pod",
+                "fk_prompt_evolution_tenant_pod",
+            ):
+                if fk == "fk_leads_crm_tenant_assigned_pod":
+                    table = "leads_crm"
+                elif fk == "fk_agent_performance_tenant_pod":
+                    table = "agent_performance_logs"
+                else:
+                    table = "prompt_evolution_logs"
+                c.execute("ALTER TABLE public." + table + " VALIDATE CONSTRAINT " + fk)
+            after = run_readonly(conn)
+            check(after["status"] == "LOCAL_SQL_PREFLIGHT_CLEAR",
+                  "clean disposable SQL preflight reports local-only clear")
+            check(after["release_approved"] is False and
+                  after["environment_verified"] is False,
+                  "local SQL clear never claims real Supabase verification or release")
+            print("PREFLIGHT HOLD DETECTION + LOCAL SQL CLEAR TESTS PASS", flush=True)
 
     print("RLS CI PASS — local PostgreSQL policies and synthetic FK tests only.",flush=True)
     print("NOT VERIFIED — actual Supabase JWT signer, deployed database, policies, grants, or login.")
