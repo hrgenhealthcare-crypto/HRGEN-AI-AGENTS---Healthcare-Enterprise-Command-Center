@@ -31,3 +31,27 @@ GRANT SELECT ON TABLE public.staff_memberships TO service_role;
 -- No policy for anon/authenticated. Even a stale, still-valid user JWT cannot
 -- grant direct database read of the membership authority.
 -- Do not allow browser-side mutations or expose a membership editing API.
+
+-- Replace the existing JWT-only tenant resolver with a current database check.
+-- This protects direct Supabase Data API reads as well as backend requests:
+-- revoking the membership denies stale app_metadata tokens on the NEXT query.
+-- Function must be owned by the privileged migration owner (postgres). It
+-- reads the private-grant authority under SECURITY DEFINER with fixed search
+-- path; browser roles never gain direct SELECT on staff_memberships.
+CREATE OR REPLACE FUNCTION public.current_tenant_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT m.tenant_id
+  FROM public.staff_memberships AS m
+  WHERE m.user_id = NULLIF(auth.jwt() ->> 'sub','')::uuid
+    AND m.active IS TRUE
+    AND m.tenant_id::text = auth.jwt() -> 'app_metadata' ->> 'tenant_id'
+    AND m.role = auth.jwt() -> 'app_metadata' ->> 'hrgen_role'
+  LIMIT 1
+$$;
+REVOKE ALL ON FUNCTION public.current_tenant_id() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_tenant_id() TO authenticated, service_role;
