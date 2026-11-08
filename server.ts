@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
+import { adminApiGate } from './server/governance/adminApiGate';
 
 dotenv.config();
 
@@ -15,7 +16,22 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
-app.use(express.json());
+app.use(express.json({limit:'100kb'}));
+
+/**
+ * P0: all internal AI/CRM/marketing/settings APIs require a server-to-server
+ * secret. A browser must never contain that secret. Until proper HttpOnly
+ * session auth + role/tenant controls are implemented the interactive admin
+ * workspace is read-only by design. Do not enable public sale/deployment.
+ */
+app.use('/api',adminApiGate);
+
+// Provider-specific signatures have not been verified. Disable callbacks
+// rather than accepting unsigned calls from an arbitrary Internet client.
+app.use('/webhook',(_req,res)=>{
+  res.setHeader('Cache-Control','no-store');
+  res.status(503).json({success:false,code:'PROVIDER_SIGNATURE_NOT_CONFIGURED'});
+});
 
 // Initialize GoogleGenAI server-side with telemetry header
 const ai = new GoogleGenAI({
