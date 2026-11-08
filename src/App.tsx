@@ -21,6 +21,7 @@ import { RagMemoryInspector } from './components/RagMemoryInspector';
 import { AgentTrainingModal } from './components/AgentTrainingModal';
 import { SystemSettingsDrawer } from './components/SystemSettingsDrawer';
 import { StarRingBackground } from './components/StarRingBackground';
+import { WorkflowTwinView } from './components/WorkflowTwinView';
 import { JarvisHologramAvatar } from './components/JarvisHologramAvatar';
 import { AgentPod, BusinessLead, BusinessServiceOrProduct, LeadStage, AppNavTab } from './types';
 import { CheckCircle2 } from 'lucide-react';
@@ -28,6 +29,7 @@ import { depthZoomViewVariant, cinematicSpring } from './utils/motionTransitions
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppNavTab>('dashboard');
+  const [isWorkflowTwinOpen, setIsWorkflowTwinOpen] = useState(false);
   const [pods, setPods] = useState<AgentPod[]>([]);
   const [activePodId, setActivePodId] = useState<string>('pod-01');
   const [leads, setLeads] = useState<BusinessLead[]>([]);
@@ -148,20 +150,10 @@ export default function App() {
   };
 
   const handleOrderServiceDirect = (service: BusinessServiceOrProduct) => {
-    handleCreateLead({
-      name: 'Enterprise Client',
-      phone: '+91 98201 00000',
-      email: 'founder@enterprise.co',
-      company: 'Digital Growth Enterprise',
-      serviceOfInterest: service.name,
-      value: service.price,
-      assignedPodId: 'pod-01',
-      assignedPodName: 'Priya Sharma (Inbound Reception)',
-      stage: 'won',
-      notes: `Direct license activation for ${service.name}. TAT: ${service.tat}.`,
-      source: 'web_chat',
-    });
-    showToast(`License Activated: ${service.name} (₹${service.price.toLocaleString('en-IN')})!`);
+    // A click alone cannot create a paid license, a confirmed lead, or a tax invoice.
+    setIsPricingDrawerOpen(false);
+    setIsWorkflowTwinOpen(true);
+    showToast(`Quotation draft selected for ${service.name}. No payment, lead or license was created.`);
   };
 
   const handleConciergeEscalateToVoice = (podId: string, visitorName: string, _query: string) => {
@@ -214,12 +206,12 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030712] flex flex-col text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="relative min-h-screen bg-[#080709] flex flex-col text-slate-100 antialiased selection:bg-[#E72D88]/30 selection:text-white">
       {/* Fullscreen Ambient Two-Rings + Twinkling Stars Background */}
       <StarRingBackground
         variant="fullscreen"
-        accentColor="#10b981"
-        secondaryColor="#06b6d4"
+        accentColor="#E72D88"
+        secondaryColor="#FFFFFF"
       />
 
       {/* Top Header */}
@@ -227,11 +219,14 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickCall={() => setActiveTab('copilot')}
+        onOpenWorkflowTwin={() => setIsWorkflowTwinOpen(true)}
         onOpenNewLead={() => setIsNewLeadModalOpen(true)}
         onOpenSqlModal={() => setIsSqlModalOpen(true)}
         onOpenPricingDrawer={() => setIsPricingDrawerOpen(true)}
         onOpenMoreMenu={() => setIsMoreSheetOpen(true)}
       />
+
+      {isWorkflowTwinOpen && <WorkflowTwinView onClose={() => setIsWorkflowTwinOpen(false)} />}
 
       {/* Floating Toast Notification */}
       <AnimatePresence>
