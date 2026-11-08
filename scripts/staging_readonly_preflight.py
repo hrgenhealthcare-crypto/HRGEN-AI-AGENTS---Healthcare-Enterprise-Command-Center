@@ -78,11 +78,28 @@ def collect_preflight(cursor: Any) -> dict[str, Any]:
             counts[key] = int(cursor.fetchone()[0])
 
     cursor.execute("""
-      SELECT policyname FROM pg_policies
+      SELECT tablename, policyname, permissive, cmd, roles
+        FROM pg_policies
        WHERE schemaname='public'
          AND policyname LIKE 'staff_write_%'
     """)
-    write_policies = {str(x[0]) for x in cursor.fetchall()}
+    found_policies = {
+        (str(table), str(name), str(permissive), str(command).upper(),
+         tuple(roles) if roles else ())
+        for table, name, permissive, command, roles in cursor.fetchall()
+    }
+    required_tables = (
+        "tenants", "agent_configs", "leads_crm",
+        "agent_performance_logs", "prompt_evolution_logs",
+        "llm_fallback_audit_logs",
+    )
+    missing_write_policies = []
+    for table in required_tables:
+        for op in ("INSERT", "UPDATE", "DELETE"):
+            name = f"staff_write_{op.lower()}_{table}"
+            expected = (table, name, "RESTRICTIVE", op, ("authenticated",))
+            if expected not in found_policies:
+                missing_write_policies.append(name)
 
     # Check direct grants, never query any real membership row details.
     grants: dict[str, bool] = {}
@@ -103,9 +120,10 @@ def collect_preflight(cursor: Any) -> dict[str, Any]:
                 for priv in ("insert", "update", "delete"))
     )
     cursor.execute("""
-      SELECT pg_get_functiondef('public.current_tenant_id()'::regprocedure)
+      SELECT pg_get_functiondef(to_regprocedure('public.current_tenant_id()'))
     """)
-    func = str(cursor.fetchone()[0])
+    result = cursor.fetchone()
+    func = str(result[0] or "") if result else ""
     trusted_resolver = (
         "staff_memberships" in func
         and "app_metadata" in func
@@ -118,7 +136,7 @@ def collect_preflight(cursor: Any) -> dict[str, Any]:
     if rls_missing or not forced_membership: blockers.append("rls_not_enforced")
     if unvalidated: blockers.append("unvalidated_tenant_pod_constraints")
     if any(value > 0 for value in counts.values()): blockers.append("historic_tenant_data_cleanup")
-    if len(write_policies) < 18: blockers.append("missing_direct_data_api_write_policies")
+    if missing_write_policies: blockers.append("missing_direct_data_api_write_policies")
     if not expected_grants: blockers.append("membership_privilege_mismatch")
     if not trusted_resolver: blockers.append("staff_claim_resolver_mismatch")
 
@@ -130,7 +148,8 @@ def collect_preflight(cursor: Any) -> dict[str, Any]:
         "membership_rls_forced": forced_membership,
         "unvalidated_constraints": unvalidated,
         "aggregate_data_counts": counts,
-        "direct_write_policy_count": len(write_policies),
+        "direct_write_policy_count": len(found_policies),
+        "missing_direct_write_policies": sorted(missing_write_policies),
         "membership_grants_expected": expected_grants,
         "current_tenant_resolver_authoritative": trusted_resolver,
         "environment_verified": False,
@@ -144,6 +163,9 @@ def run_readonly(connection: Any) -> dict[str, Any]:
     with connection.cursor() as cursor:
         cursor.execute("BEGIN TRANSACTION READ ONLY")
         try:
+            # Bounded read-only SQL review must not hang a shared staging DB.
+            cursor.execute("SET LOCAL statement_timeout = '15s'")
+            cursor.execute("SET LOCAL lock_timeout = '3s'")
             result = collect_preflight(cursor)
         finally:
             cursor.execute("ROLLBACK")
