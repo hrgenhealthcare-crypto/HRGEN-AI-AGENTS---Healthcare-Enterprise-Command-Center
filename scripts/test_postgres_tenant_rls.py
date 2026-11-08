@@ -95,7 +95,7 @@ def main():
             user_b="22222222-2222-4222-8222-222222222222"
             c.execute("""
                 INSERT INTO public.staff_memberships (user_id,tenant_id,role,active)
-                VALUES (%s,%s,'sales',true), (%s,%s,'viewer',true)
+                VALUES (%s,%s,'admin',true), (%s,%s,'viewer',true)
             """,(user_a,A,user_b,B))
             for tid,pid,label in [(A,POD_A,"A"),(B,POD_B,"B")]:
                 c.execute("""
@@ -161,7 +161,7 @@ def main():
                   "sub": user_a if tenant != B else user_b,
                   "app_metadata":({
                       "tenant_id":tenant,
-                      "hrgen_role":"sales" if tenant==A else "viewer",
+                      "hrgen_role":"admin" if tenant==A else "viewer",
                   } if tenant else {}),
                   "user_metadata":{"tenant_id":editable,"role":"service_role"},
                 })
@@ -269,10 +269,30 @@ def main():
             c.execute("SELECT count(*) FROM public.llm_fallback_audit_logs")
             check(c.fetchone()[0]==0,
                   "missing trusted tenant denies all transcript logs")
+            # Audit logs must not be editable by even an active lab admin.
+            identity(A,B)
+            blocked("""
+                INSERT INTO public.llm_fallback_audit_logs
+                (tenant_id,pod_id,user_transcript,spoken_text,word_count,
+                 selected_tier,selected_provider,selected_model,total_latency_ms)
+                VALUES (%s,'synth','synthetic','synthetic',1,0,'mock','mock',1)
+            """,(A,),errors.InsufficientPrivilege,
+            "lab admin cannot insert immutable audit log via browser RLS")
+
             identity(B,A)
             c.execute("SELECT DISTINCT tenant_id::text FROM public.leads_crm")
             check({x[0] for x in c.fetchall()}=={B},
                   "tenant B sees only tenant B records")
+            blocked("""
+                INSERT INTO public.leads_crm
+                    (tenant_id,lead_name,phone,service_of_interest)
+                VALUES (%s,'VIEWER-WRITE','0000000','synthetic')
+            """,(B,),errors.InsufficientPrivilege,
+            "viewer cannot INSERT own-tenant lead via direct Supabase Data API")
+            c.execute("UPDATE public.leads_crm SET stage='won' WHERE id=%s",(LEAD_B,))
+            check(c.rowcount==0,"viewer cannot UPDATE own-tenant leads")
+            c.execute("DELETE FROM public.leads_crm WHERE id=%s",(LEAD_B,))
+            check(c.rowcount==0,"viewer cannot DELETE own-tenant leads")
 
             c.execute("RESET ROLE")
             c.execute("SELECT count(*) FROM public.leads_crm WHERE id=%s",(LEAD_B,))
@@ -300,7 +320,7 @@ def main():
 
             c.execute("SET ROLE service_role")
             c.execute("SELECT tenant_id::text,role,active FROM public.staff_memberships WHERE user_id=%s",(user_a,))
-            check(c.fetchone()==(A,"sales",True),
+            check(c.fetchone()==(A,"admin",True),
                   "privileged server reader sees current synthetic membership")
             try:
                 c.execute("UPDATE public.staff_memberships SET role='owner' WHERE user_id=%s",(user_a,))
@@ -336,7 +356,7 @@ def main():
                   "direct DB RLS rejects stale JWT after role demotion")
             c.execute("RESET ROLE")
 
-            c.execute("UPDATE public.staff_memberships SET role='sales',tenant_id=%s WHERE user_id=%s",(B,user_a))
+            c.execute("UPDATE public.staff_memberships SET role='admin',tenant_id=%s WHERE user_id=%s",(B,user_a))
             c.execute("SET ROLE authenticated")
             identity(A,B)
             c.execute("SELECT count(*) FROM public.leads_crm")
