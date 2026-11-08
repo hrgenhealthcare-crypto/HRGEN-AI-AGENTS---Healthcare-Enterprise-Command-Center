@@ -23,7 +23,7 @@ jobs:
       - name: Existing signed staff CRM and tenant guard regressions
         run: npm run test:security
       - name: Workflow Twin rules, branding and graph regressions
-        run: npx tsx --test tests/workflowTwin.test.ts tests/workflowTwinBrand.test.ts
+        run: npx tsx --test tests/workflowTwin.test.ts tests/workflowTwinBrand.test.ts tests/giaReadiness.test.ts
       - name: TypeScript
         run: npm run lint
       - name: Build
