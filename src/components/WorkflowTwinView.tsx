@@ -9,6 +9,7 @@ import {
 import './WorkflowTwinView.css';
 import { HRGenWordmark } from './HRGenWordmark';
 import { WorkflowPitchKit } from './WorkflowPitchKit';
+import { GiaReadinessPanel } from './GiaReadinessPanel';
 
 type Props = { onClose: () => void };
 const stageColumns = STAGES.map((stage,index)=>({stage,x:25+index*228}));
@@ -216,6 +217,7 @@ export function WorkflowTwinView({onClose}:Props) {
             <div><b>Backend / n8n integration</b><small>No workflow publishing, secrets or webhooks in this frontend demo.</small></div>
             <div><b>Tenant deployment</b><small>Independent permissions, isolation and approval gates required.</small></div>
           </div></div>}
+          {view==='admin'&&<div className="hwt-review-block"><GiaReadinessPanel/></div>}
           {view==='admin'&&<div className="hwt-review-block"><WorkflowPitchKit moduleNames={blueprint.modules.map(m=>m.label)} /></div>}
           <div className="hwt-grid hwt-summary-grid">
             <div className="hwt-card hwt-build-block hwt-review-block"><div className="hwt-card-head"><strong>Selected Solution Stack</strong><span className="hwt-badge">{blueprint.modules.length} modules</span></div><div className="hwt-padding hwt-tags">
