@@ -146,3 +146,49 @@ test('invalid credentials, anonymous and forged token fail closed', async ({page
   expect(forged.status()).toBe(401);
   expect(await forged.text()).not.toContain('Synthetic Lab');
 });
+
+
+test('disabled staff member loses existing browser session on next API request', async ({page,request}, info) => {
+  const mobile=info.project.name.includes('mobile');
+  const email=mobile ? 'a-revoke-mobile@synthetic.invalid' : 'a-revoke-desktop@synthetic.invalid';
+  await signIn(page,request,email);
+  await expect(page.getByText('Role: sales')).toBeVisible();
+  await expect(page.getByText('Synthetic Lab A baseline')).toBeVisible();
+  const disable=await request.post(base+'/__synthetic/membership',{
+    headers:{'x-synthetic-control':'ci-fixture-only'},
+    data:{email,active:false},
+  });
+  expect(disable.status()).toBe(200);
+  await page.getByRole('button',{name:'Refresh'}).click();
+  await expect(page.getByRole('heading',{name:'Authorized staff sign in'})).toBeVisible();
+  await expect(page.getByText('Synthetic Lab A baseline')).toHaveCount(0);
+  expect(await page.evaluate(()=>localStorage.length)).toBe(0);
+  // Re-use the originally signed JWT directly to verify server-side revocation.
+  const oldToken=await tokenFor(request,email);
+  const denial=await request.get(base+'/api/staff/leads',{
+    headers:{Authorization:'Bearer '+oldToken},
+  });
+  expect(denial.status()).toBe(403);
+});
+
+test('role change immediately rejects previously signed admin token and clears UI', async ({page,request}, info) => {
+  const mobile=info.project.name.includes('mobile');
+  const email=mobile ? 'b-rotate-mobile@synthetic.invalid' : 'b-rotate-desktop@synthetic.invalid';
+  await signIn(page,request,email);
+  await expect(page.getByText('Role: admin')).toBeVisible();
+  await expect(page.getByText('Synthetic Lab B baseline')).toBeVisible();
+  const change=await request.post(base+'/__synthetic/membership',{
+    headers:{'x-synthetic-control':'ci-fixture-only'},
+    data:{email,role:'viewer'},
+  });
+  expect(change.status()).toBe(200);
+  const stale=await tokenFor(request,email);
+  const denial=await request.patch(base+'/api/staff/leads/bbbbbbbb-7777-4777-8777-bbbbbbbbbbbb',{
+    headers:{Authorization:'Bearer '+stale},
+    data:{stage:'won'},
+  });
+  expect(denial.status()).toBe(403);
+  await page.getByRole('button',{name:'Refresh'}).click();
+  await expect(page.getByRole('heading',{name:'Authorized staff sign in'})).toBeVisible();
+  await expect(page.getByText('Synthetic Lab B baseline')).toHaveCount(0);
+});
