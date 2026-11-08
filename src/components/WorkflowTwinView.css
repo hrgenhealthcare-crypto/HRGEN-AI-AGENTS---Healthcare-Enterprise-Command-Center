@@ -186,3 +186,36 @@
   .hwt-pitch-fields,.hwt-pitch-proof .hwt-pitch-fields{grid-template-columns:1fr}
   .hwt-pitch-kit>summary{min-height:50px}
 }
+
+/* GIA readiness: read-only evidence and staging controls. No client credentials. */
+.hwt-gia-panel{border-color:#62324B}
+.hwt-gia-intro{padding:14px 16px}
+.hwt-gia-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.hwt-gia-metrics>div{min-width:0;padding:12px;background:#26151F;border:1px solid #553047;border-radius:10px}
+.hwt-gia-metrics b{font-size:23px;font-weight:850;display:block;color:#fff}
+.hwt-gia-metrics small{display:block;margin-top:3px;color:#D5B7C6;font-size:10px}
+.hwt-gia-primary{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.hwt-gia-primary button{min-height:44px;display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 13px;border-radius:10px;border:1px solid #873E60;background:#391A2B;color:#FFE6F1;font-weight:750;font-size:12px;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.hwt-gia-primary button:hover{background:#63263E;box-shadow:0 0 0 2px #E72D8838}
+.hwt-gia-primary button:active{transform:scale(.98);box-shadow:0 0 0 3px #E72D8850}
+.hwt-gia-matrix{padding:0 15px 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.hwt-gia-gate{background:#22151C;border:1px solid #4C293B;padding:12px;border-radius:10px}
+.hwt-gia-gate-head{display:flex;justify-content:space-between;align-items:flex-start;gap:9px}
+.hwt-gia-gate-head strong{font-size:11px;display:flex;align-items:center;gap:7px;line-height:1.45}
+.hwt-gia-gate p{margin:8px 0 0;color:#C9B7C0;font-size:11px;line-height:1.55}
+.hwt-gia-gate p b{color:#FADEEB}
+.hwt-gia-state{display:inline-flex;flex-shrink:0;font-size:10px;border-radius:7px;padding:5px 8px;font-weight:750}
+.hwt-gia-state.is-archive{background:#243B33;color:#BAF7DA}
+.hwt-gia-state.is-hold{background:#55283C;color:#FFBAD8}
+.hwt-gia-note{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;border-top:1px solid #4C293B;color:#F3BFD7;font-size:11px;line-height:1.55}
+.hwt-gia-note svg{flex-shrink:0}
+@media(max-width:640px){
+  .hwt-gia-intro{padding:12px}
+  .hwt-gia-metrics{gap:5px}
+  .hwt-gia-metrics>div{padding:10px 8px}
+  .hwt-gia-metrics b{font-size:19px}
+  .hwt-gia-metrics small{font-size:9px}
+  .hwt-gia-primary{display:grid;grid-template-columns:1fr 1fr}
+  .hwt-gia-primary button{font-size:10px;padding:10px 6px}
+  .hwt-gia-matrix{grid-template-columns:1fr;padding:0 12px 12px}
+}
