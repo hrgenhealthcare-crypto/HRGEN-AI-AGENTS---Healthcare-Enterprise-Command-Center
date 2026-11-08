@@ -1,0 +1,51 @@
+name: HRGen Governance P0 API Gates
+
+on:
+  push:
+    branches: [feature/hrgen-governance-p0-api-gates]
+  pull_request:
+    branches: [feature/hrgen-workflow-twin-mvp]
+    paths:
+      - 'server.ts'
+      - 'server/governance/**'
+      - 'src/App.tsx'
+      - 'src/components/SystemSettingsDrawer.tsx'
+      - 'src/components/PWAInstallButton.tsx'
+      - 'tests/governance*'
+      - '.github/workflows/governance-p0-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p0-private-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Security and UI regression
+        run: npx tsx --test tests/governanceAdminGate.test.ts tests/workflowTwin.test.ts tests/workflowTwinBrand.test.ts
+      - name: TypeScript verification
+        run: npm run lint
+      - name: Frontend build
+        run: npm run build
+      - name: Real Express authorization smoke
+        env:
+          PORT: '4178'
+          NODE_ENV: 'production'
+          GEMINI_API_KEY: 'CI_ONLY_NO_REAL_API_KEY'
+          HRGEN_ADMIN_API_TOKEN: 'hrgen-ci-only-not-a-production-secret-0123456789abcdef'
+        run: |
+          npx tsx server.ts > /tmp/hrgen-p0-server.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:4178/ > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          node tests/governanceRealApi.mjs

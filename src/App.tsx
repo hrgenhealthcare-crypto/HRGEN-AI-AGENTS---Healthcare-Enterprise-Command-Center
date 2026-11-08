@@ -46,24 +46,25 @@ export default function App() {
   const [botConsolePod, setBotConsolePod] = useState<AgentPod | null>(null);
   const [isJarvisOpen, setIsJarvisOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [privateApiLocked, setPrivateApiLocked] = useState(false);
 
   useEffect(() => {
     fetch('/api/pods')
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error('Private API locked'); return res.json(); })
       .then((data) => {
         if (data.pods) {
           setPods(data.pods);
           if (data.pods.length > 0) setActivePodId(data.pods[0].id);
         }
       })
-      .catch((err) => console.error('Failed to load agent pods:', err));
+      .catch(() => setPrivateApiLocked(true));
 
     fetch('/api/leads')
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error('Private API locked'); return res.json(); })
       .then((data) => {
         if (data.leads) setLeads(data.leads);
       })
-      .catch((err) => console.error('Failed to load CRM leads:', err));
+      .catch(() => setPrivateApiLocked(true));
   }, []);
 
   const showToast = (msg: string) => {
@@ -78,12 +79,15 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPodData),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.pod) {
         setPods((prev) => [...prev, data.pod]);
         showToast(`Agent Pod "${data.pod.name}" booted & deployed successfully!`);
       }
     } catch (e) {
+      setPrivateApiLocked(true);
+      showToast('Private backend locked: action was not completed.');
       console.error(e);
     }
   };
@@ -95,22 +99,28 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.pod) {
         setPods((prev) => prev.map((p) => (p.id === podId ? data.pod : p)));
         showToast(`Agent Pod "${data.pod.name}" configuration updated.`);
       }
     } catch (e) {
+      setPrivateApiLocked(true);
+      showToast('Private backend locked: action was not completed.');
       console.error(e);
     }
   };
 
   const handleDeletePod = async (podId: string) => {
     try {
-      await fetch(`/api/pods/${podId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/pods/${podId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Private API authorization required');
       setPods((prev) => prev.filter((p) => p.id !== podId));
       showToast('Custom Agent Pod removed.');
     } catch (e) {
+      setPrivateApiLocked(true);
+      showToast('Private backend locked: action was not completed.');
       console.error(e);
     }
   };
@@ -122,12 +132,15 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(leadData),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.lead) {
         setLeads((prev) => [data.lead, ...prev]);
         showToast(`New Lead "${data.lead.name}" (₹${data.lead.value.toLocaleString('en-IN')}) saved into CRM.`);
       }
     } catch (e) {
+      setPrivateApiLocked(true);
+      showToast('Private backend locked: action was not completed.');
       console.error(e);
     }
   };
@@ -139,31 +152,25 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage }),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.lead) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? data.lead : l)));
         showToast(`Lead stage updated to ${stage.replace('_', ' ')}.`);
       }
     } catch (e) {
+      setPrivateApiLocked(true);
+      showToast('Private backend locked: action was not completed.');
       console.error(e);
     }
   };
 
   const handleOrderServiceDirect = (service: BusinessServiceOrProduct) => {
-    handleCreateLead({
-      name: 'Enterprise Client',
-      phone: '+91 98201 00000',
-      email: 'founder@enterprise.co',
-      company: 'Digital Growth Enterprise',
-      serviceOfInterest: service.name,
-      value: service.price,
-      assignedPodId: 'pod-01',
-      assignedPodName: 'Priya Sharma (Inbound Reception)',
-      stage: 'won',
-      notes: `Direct license activation for ${service.name}. TAT: ${service.tat}.`,
-      source: 'web_chat',
-    });
-    showToast(`License Activated: ${service.name} (₹${service.price.toLocaleString('en-IN')})!`);
+    // Never fabricate a won lead, payment or active license from a UI click.
+    // Provisioning needs authenticated quote acceptance + payment verification.
+    setIsPricingDrawerOpen(false);
+    setIsWorkflowTwinOpen(true);
+    showToast(`Quotation draft selected: ${service.name}. No license, payment or order was created.`);
   };
 
   const handleConciergeEscalateToVoice = (podId: string, visitorName: string, _query: string) => {
@@ -237,6 +244,10 @@ export default function App() {
       />
 
       {isWorkflowTwinOpen && <WorkflowTwinView onClose={() => setIsWorkflowTwinOpen(false)} />}
+
+      {privateApiLocked && <div role="status" data-testid="private-api-locked" className="mx-3 mt-3 sm:mx-6 rounded-xl border border-[#A8446D] bg-[#29141E] px-4 py-3 text-xs sm:text-sm text-[#FFD9E9]">
+        <strong>Private backend locked.</strong> Agent, CRM and live actions require verified server-side login. Workflow Twin remains available as a draft-only preview; no operation has been sent.
+      </div>}
 
       {/* Floating Toast Notification */}
       <AnimatePresence>
