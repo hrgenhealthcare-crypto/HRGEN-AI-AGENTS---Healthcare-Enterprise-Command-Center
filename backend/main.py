@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
+from backend.voice_ingress_guard import VoiceIngressGuard
 from backend.routers.voice_webhook import router as voice_router
 from backend.schemas.voice import HealthCheckResponse
 
@@ -48,6 +49,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Authentication and payload limits execute before JSON/multipart body parsing.
+# This accepts only trusted server/gateway traffic, not direct provider callbacks.
+app.add_middleware(
+    VoiceIngressGuard,
+    shared_secret=settings.VOICE_WEBHOOK_SHARED_SECRET,
+    max_request_bytes=settings.MAX_AUDIO_UPLOAD_BYTES + 65536,
+    max_json_bytes=settings.MAX_JSON_BODY_BYTES,
 )
 
 

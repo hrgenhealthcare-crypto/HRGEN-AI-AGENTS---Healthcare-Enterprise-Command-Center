@@ -1,0 +1,44 @@
+name: HRGen Private Browser E2E Security Gate
+on:
+  push:
+    branches:
+      - integration/security-crm-voice-20261108
+  pull_request:
+    paths:
+      - 'src/main.tsx'
+      - 'src/components/StaffCrmPortal.tsx'
+      - 'playwright.config.ts'
+      - 'tests/browser/**'
+      - 'package.json'
+      - '.github/workflows/private-browser-e2e.yml'
+permissions:
+  contents: read
+jobs:
+  chromium-e2e:
+    name: Desktop and mobile real Chromium browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Install isolated Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Type check
+        run: npm run lint
+      - name: Build production-mode browser bundle
+        run: npm run build
+      - name: Isolated staff locked UI + API security E2E
+        run: npm run test:browser
+      - name: Upload failure-only debug artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hrgen-private-browser-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import { Router, type RequestHandler } from 'express';
 import type { StaffIdentity, StaffVerifier } from './staffJwt';
+import type { StaffMembershipChecker } from './staffMembership';
 
 type LeadStage = 'new' | 'contacted' | 'demo_scheduled' | 'proposal_sent' | 'won' | 'lost';
 const stages = new Set<LeadStage>(['new','contacted','demo_scheduled','proposal_sent','won','lost']);
@@ -17,11 +18,17 @@ export type LeadStore = Map<string, StaffLead>;
 export const createSyntheticLeadStore = (): LeadStore => new Map();
 type VerifiedResponse = import('express').Response<any, { staff: StaffIdentity }>;
 
-export function createStaffCrmRouter(verifier: StaffVerifier | null, store: LeadStore) {
+export function createStaffCrmRouter(
+  verifier: StaffVerifier | null,
+  store: LeadStore,
+  membershipCheck: StaffMembershipChecker | null = null,
+) {
   const router = Router();
   router.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
-    if (!verifier) return res.status(503).json({ error: 'Staff login unavailable: identity provider not configured' });
+    if (!verifier || !membershipCheck) {
+      return res.status(503).json({ error: 'Staff access unavailable: trusted membership provider not configured' });
+    }
     next();
   });
 
@@ -30,13 +37,28 @@ export function createStaffCrmRouter(verifier: StaffVerifier | null, store: Lead
     if (!/^Bearer [^\s]+$/i.test(authorization)) {
       res.status(401).json({ error: 'Unauthorized' }); return;
     }
+    let staff: StaffIdentity;
     try {
-      const staff = await verifier!(authorization.slice(7));
-      (res as VerifiedResponse).locals.staff = staff;
-      next();
+      staff = await verifier!(authorization.slice(7));
     } catch {
       res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
+
+    // Verify CURRENT membership after checking signature, issuer and expiry.
+    // Any role/tenant change or disablement immediately invalidates old token.
+    try {
+      if (!(await membershipCheck!(staff))) {
+        res.status(403).json({ error: 'Staff access revoked or changed' });
+        return;
+      }
+    } catch {
+      // Fail closed: missing or failed database reads cannot use cached JWT role.
+      res.status(503).json({ error: 'Staff authorization unavailable' });
+      return;
+    }
+    (res as VerifiedResponse).locals.staff = staff;
+    next();
   };
   router.use(authenticate);
 

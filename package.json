@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test:security": "tsx --test tests/internalApiGuard.test.ts tests/staffCrmHttp.test.ts tests/legacyApiQuarantine.test.ts"
+    "test:security": "tsx --test tests/internalApiGuard.test.ts tests/staffCrmHttp.test.ts tests/legacyApiQuarantine.test.ts tests/supabaseMembership.test.ts",
+    "test:browser": "playwright test -c playwright.config.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -40,6 +41,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "vite-plugin-pwa": "^2.0.0"
+    "vite-plugin-pwa": "^2.0.0",
+    "@playwright/test": "^1.56.1"
   }
 }

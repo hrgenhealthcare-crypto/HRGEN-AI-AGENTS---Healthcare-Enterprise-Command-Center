@@ -7,6 +7,7 @@ import {
 } from 'jose';
 import { makeStaffVerifier } from '../security/staffJwt';
 import { createStaffCrmRouter, createSyntheticLeadStore } from '../security/staffRoutes';
+import { createStaffMembershipChecker, type StaffMembership } from '../security/staffMembership';
 
 const issuer = 'https://synthetic-lab-auth.invalid/auth/v1';
 const tenantA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -24,10 +25,20 @@ test('verified, tenant-scoped staff CRM HTTP integration: two synthetic labs', a
   });
   const verifier = makeStaffVerifier(keys, issuer);
   const store = createSyntheticLeadStore();
+  const memberships = new Map<string, StaffMembership>([
+    [staffA, { userId: staffA, tenantId: tenantA, role: 'sales', active: true }],
+    [staffB, { userId: staffB, tenantId: tenantB, role: 'admin', active: true }],
+    [viewerId, { userId: viewerId, tenantId: tenantA, role: 'viewer', active: true }],
+  ]);
+  let lookupUnavailable = false;
+  const membershipCheck = createStaffMembershipChecker(async userId => {
+    if (lookupUnavailable) throw new Error('Simulated membership DB offline');
+    return memberships.get(userId) ?? null;
+  });
 
   const app = express();
   app.use(express.json());
-  app.use('/api/staff', createStaffCrmRouter(verifier, store));
+  app.use('/api/staff', createStaffCrmRouter(verifier, store, membershipCheck));
   const server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
@@ -121,6 +132,27 @@ test('verified, tenant-scoped staff CRM HTTP integration: two synthetic labs', a
     assert.equal((await request(`/leads/${leadA.body.lead.id}`, tokenA,
       'PATCH', { stage: 'contacted' })).status, 200, 'Own-tenant change allowed');
     assert.equal(store.get(leadA.body.lead.id)?.stage, 'contacted');
+
+    memberships.set(staffA, { userId: staffA, tenantId: tenantA, role: 'sales', active: false });
+    assert.equal((await request('/leads', tokenA)).status, 403,
+      'Disabled staff blocked immediately with otherwise valid token');
+    memberships.set(staffA, { userId: staffA, tenantId: tenantA, role: 'viewer', active: true });
+    assert.equal((await request('/leads', tokenA)).status, 403,
+      'Role demotion immediately blocks stale signed sales token');
+    memberships.set(staffA, { userId: staffA, tenantId: tenantB, role: 'sales', active: true });
+    assert.equal((await request('/leads', tokenA)).status, 403,
+      'Tenant reassignment immediately blocks stale signed token');
+    memberships.delete(staffA);
+    assert.equal((await request('/leads', tokenA)).status, 403,
+      'Deleted staff membership invalidates old token');
+    memberships.set(staffA, { userId: staffA, tenantId: tenantA, role: 'sales', active: true });
+    lookupUnavailable = true;
+    assert.equal((await request('/leads', tokenA)).status, 503,
+      'Member database outage must fail closed, not trust stale JWT claims');
+    lookupUnavailable = false;
+    assert.equal((await request('/leads', tokenA)).status, 200,
+      'Server-side membership restore permits authorized synthetic user');
+
   } finally {
     await new Promise<void>((resolve, reject) =>
       server.close(err => err ? reject(err) : resolve()));
@@ -140,5 +172,26 @@ test('staff API fails closed without configured verifier', async () => {
     assert.equal(result.headers.get('cache-control'), 'no-store');
   } finally {
     await new Promise<void>((resolve, reject) => server.close(err => err ? reject(err) : resolve()));
+  }
+});
+
+test('a valid signed token cannot bypass missing current membership lookup', async () => {
+  const app = express();
+  app.use('/api/staff', createStaffCrmRouter(
+    async () => ({ userId: staffA, tenantId: tenantA, role: 'sales' }),
+    createSyntheticLeadStore(),
+  ));
+  const server = createServer(app);
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const addr=server.address();
+  assert.ok(addr && typeof addr !== 'string');
+  try {
+    const response=await fetch(`http://127.0.0.1:${addr.port}/api/staff/leads`,{
+      headers:{Authorization:'Bearer synthetic-signed-token'},
+    });
+    assert.equal(response.status,503);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+  } finally {
+    await new Promise<void>((resolve,reject)=>server.close(err=>err?reject(err):resolve()));
   }
 });

@@ -1,0 +1,75 @@
+name: HRGen Integrated Security Regression
+on:
+  push:
+    branches:
+      - integration/security-crm-voice-20261108
+  pull_request:
+    paths:
+      - 'server.ts'
+      - 'security/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'backend/**'
+      - 'supabase/migrations/**'
+      - 'package.json'
+      - '.github/workflows/integrated-security.yml'
+permissions:
+  contents: read
+jobs:
+  express-staff:
+    name: Express auth, tenant access and UI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Node dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run lint
+      - name: Signed JWT, tenant and legacy negative-access tests
+        run: npm run test:security
+      - name: Frontend build
+        run: npm run build
+  python-voice:
+    name: Python voice ingress and API
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Compile Python
+        run: python -m compileall -q backend
+      - name: Voice ASGI + FastAPI negative-access integration tests
+        run: python -m unittest discover -s backend/tests -p 'test_*.py' -v
+      - name: Import FastAPI
+        run: python -c 'from backend.main import app; print("Voice API import OK")'
+  release-gates:
+    name: Integration release-hold assertions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify fail-closed production staging pilot and two codebases
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('server.ts').read_text()
+          assert "app.use('/api', requireInternalApiKey);" in s
+          assert "app.use('/webhook', quarantineUnverifiedWebhook);" in s
+          assert "if (process.env.NODE_ENV === 'production')" in s
+          assert "app.use('/api/staff', (_req, res)" in s
+          assert "staffVerifierFromEnvironment()" in s
+          p=Path('backend/main.py').read_text()
+          assert "VoiceIngressGuard" in p
+          assert "app.add_middleware(" in p
+          m=Path('supabase/migrations/20261105000001_trusted_tenant_claim.sql').read_text()
+          assert 'app_metadata' in m
+          assert 'user_metadata' not in m
+          print('Integrated code presence checks PASS; release remains HOLD')
+          PY

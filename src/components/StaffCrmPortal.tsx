@@ -41,10 +41,18 @@ export const StaffCrmPortal: React.FC = () => {
       cache: 'no-store',
     });
     const data = await response.json().catch(() => ({}));
+    // Never leave a previous tenant's lead data visible after a revoked,
+    // expired, demoted or unavailable server-side authorization check.
+    if ([401, 403, 503].includes(response.status)) {
+      setSession(null);
+      setIdentity(null);
+      setLeads([]);
+      void identityProvider?.auth.signOut().catch(() => undefined);
+    }
     if (!response.ok) throw new Error(
       response.status === 503 ? 'Private CRM is not enabled on this server.' :
       response.status === 401 ? 'Session expired or invalid.' :
-      response.status === 403 ? 'This staff role cannot perform that action.' :
+      response.status === 403 ? 'Staff access was revoked or changed. Sign in again.' :
       'Request unavailable; check access or input.'
     );
     return data;
