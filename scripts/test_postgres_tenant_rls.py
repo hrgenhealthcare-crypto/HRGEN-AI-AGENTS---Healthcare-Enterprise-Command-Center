@@ -90,6 +90,13 @@ def main():
                     "VALUES (%s,%s,%s)",
                     (t,"Synthetic Lab "+label,"demo"+label+"@example.invalid"),
                 )
+            # Trusted current membership seeded before any end-user RLS query.
+            user_a="11111111-1111-4111-8111-111111111111"
+            user_b="22222222-2222-4222-8222-222222222222"
+            c.execute("""
+                INSERT INTO public.staff_memberships (user_id,tenant_id,role,active)
+                VALUES (%s,%s,'sales',true), (%s,%s,'viewer',true)
+            """,(user_a,A,user_b,B))
             for tid,pid,label in [(A,POD_A,"A"),(B,POD_B,"B")]:
                 c.execute("""
                   INSERT INTO public.agent_configs
@@ -151,7 +158,11 @@ def main():
             def claims(*, tenant=None, editable=B):
                 return json.dumps({
                   "role":"authenticated",
-                  "app_metadata":({"tenant_id":tenant} if tenant else {}),
+                  "sub": user_a if tenant != B else user_b,
+                  "app_metadata":({
+                      "tenant_id":tenant,
+                      "hrgen_role":"sales" if tenant==A else "viewer",
+                  } if tenant else {}),
                   "user_metadata":{"tenant_id":editable,"role":"service_role"},
                 })
             def identity(tenant=None, editable=B):
@@ -287,12 +298,6 @@ def main():
                 check(c.fetchone()[0] is (privilege=="SELECT"),
                       "service_role "+privilege+" privilege restricted to SELECT")
 
-            user_a="11111111-1111-4111-8111-111111111111"
-            user_b="22222222-2222-4222-8222-222222222222"
-            c.execute("""
-                INSERT INTO public.staff_memberships (user_id,tenant_id,role,active)
-                VALUES (%s,%s,'sales',true), (%s,%s,'viewer',false)
-            """,(user_a,A,user_b,B))
             c.execute("SET ROLE service_role")
             c.execute("SELECT tenant_id::text,role,active FROM public.staff_memberships WHERE user_id=%s",(user_a,))
             check(c.fetchone()==(A,"sales",True),
@@ -311,6 +316,32 @@ def main():
                 check(True,"authenticated browser cannot query staff memberships directly")
             else:
                 raise AssertionError("authenticated browser read membership authority")
+            c.execute("RESET ROLE")
+
+            # Database RLS must also invalidate an old authenticated token
+            # even when the caller bypasses the Express API and queries directly.
+            c.execute("UPDATE public.staff_memberships SET active=false WHERE user_id=%s",(user_a,))
+            c.execute("SET ROLE authenticated")
+            identity(A,B)
+            c.execute("SELECT count(*) FROM public.leads_crm")
+            check(c.fetchone()[0]==0,
+                  "direct DB RLS rejects stale JWT after staff deactivation")
+            c.execute("RESET ROLE")
+
+            c.execute("UPDATE public.staff_memberships SET active=true,role='viewer' WHERE user_id=%s",(user_a,))
+            c.execute("SET ROLE authenticated")
+            identity(A,B)
+            c.execute("SELECT count(*) FROM public.llm_fallback_audit_logs")
+            check(c.fetchone()[0]==0,
+                  "direct DB RLS rejects stale JWT after role demotion")
+            c.execute("RESET ROLE")
+
+            c.execute("UPDATE public.staff_memberships SET role='sales',tenant_id=%s WHERE user_id=%s",(B,user_a))
+            c.execute("SET ROLE authenticated")
+            identity(A,B)
+            c.execute("SELECT count(*) FROM public.leads_crm")
+            check(c.fetchone()[0]==0,
+                  "direct DB RLS rejects stale JWT after tenant transfer")
             c.execute("RESET ROLE")
 
     print("RLS CI PASS — local PostgreSQL policies and synthetic FK tests only.",flush=True)
