@@ -15,15 +15,14 @@ import {
 import { StarRingBackground } from './StarRingBackground';
 
 export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { isInstallable, isInstalled, isIOS, isInIframe, install, markInstalled, resetInstalled } =
+  const { isInstallable, isInstalled, isIOS, isInIframe, install, resetInstalled } =
     usePWAInstall();
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [downloadingApp, setDownloadingApp] = useState(false);
   const [downloadingBundle, setDownloadingBundle] = useState(false);
   const [installSuccessMsg, setInstallSuccessMsg] = useState<string | null>(null);
 
-  // Generates a real, self-contained Desktop & Mobile Web App Launcher (.html)
-  // so users inside an iframe preview or desktop browser get an instant working app file
+  // HTML shortcut only; this does not install a PWA or Android APK.
   const handleInstallStandaloneWebApp = async () => {
     setDownloadingApp(true);
     try {
@@ -69,10 +68,8 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
-      markInstalled();
       setInstallSuccessMsg(
-        'HRGen-Agentic-AI-App.html installed & downloaded! Double-click the file anytime to launch the standalone app.'
+        'HTML launcher downloaded. This is not an installed PWA or Android APK; browser access is still required.'
       );
     } catch (e) {
       console.error(e);
@@ -85,6 +82,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
     setDownloadingBundle(true);
     try {
       const res = await fetch('/api/export/bundle');
+      if (!res.ok) throw new Error('Private export locked');
       const data = await res.json();
       const payload = JSON.stringify(data.bundle || data, null, 2);
       const blob = new Blob([payload], { type: 'application/json' });
@@ -98,6 +96,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
       URL.revokeObjectURL(url);
       setInstallSuccessMsg('Trained Agent & Hermes Skill Bundle (.json) downloaded!');
     } catch (e) {
+      setInstallSuccessMsg('Private agent bundle export blocked. No file downloaded.');
       console.error(e);
     } finally {
       setDownloadingBundle(false);
@@ -236,7 +235,6 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
                   href={typeof window !== 'undefined' ? window.location.href : '/'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => markInstalled()}
                   className="flex-1 py-2.5 px-3.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-cyan-300" />
