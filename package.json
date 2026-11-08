@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test:security": "tsx --test tests/internalApiGuard.test.ts tests/staffCrmHttp.test.ts tests/legacyApiQuarantine.test.ts",
+    "test:security": "tsx --test tests/internalApiGuard.test.ts tests/staffCrmHttp.test.ts tests/legacyApiQuarantine.test.ts tests/supabaseMembership.test.ts",
     "test:browser": "playwright test -c playwright.config.ts"
   },
   "dependencies": {
