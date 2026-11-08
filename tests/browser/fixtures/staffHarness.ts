@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { createStaffCrmRouter, createSyntheticLeadStore } from '../../../security/staffRoutes';
 import { makeStaffVerifier } from '../../../security/staffJwt';
+import { createStaffMembershipChecker, type StaffMembership } from '../../../security/staffMembership';
 import { requireInternalApiKey } from '../../../security/internalApiGuard';
 import { quarantineUnverifiedWebhook } from '../../../security/quarantineWebhook';
 
@@ -23,12 +24,20 @@ const roles = {
   'a-viewer@synthetic.invalid': { id: '33333333-3333-4333-8333-333333333333', tenantId: A, role: 'viewer' },
   'b-admin@synthetic.invalid': { id: '22222222-2222-4222-8222-222222222222', tenantId: B, role: 'admin' },
   'b-viewer@synthetic.invalid': { id: '44444444-4444-4444-8444-444444444444', tenantId: B, role: 'viewer' },
+  'a-revoke-desktop@synthetic.invalid': { id:'55555555-5555-4555-8555-555555555551', tenantId:A, role:'sales' },
+  'a-revoke-mobile@synthetic.invalid': { id:'55555555-5555-4555-8555-555555555552', tenantId:A, role:'sales' },
+  'b-rotate-desktop@synthetic.invalid': { id:'66666666-6666-4666-8666-666666666661', tenantId:B, role:'admin' },
+  'b-rotate-mobile@synthetic.invalid': { id:'66666666-6666-4666-8666-666666666662', tenantId:B, role:'admin' },
 } as const;
 const { privateKey, publicKey } = await generateKeyPair('RS256');
 const jwk = await exportJWK(publicKey);
 const verifier = makeStaffVerifier(createLocalJWKSet({
   keys: [{ ...jwk, alg: 'RS256', kid: 'synthetic-ci-key', use: 'sig' }],
 }), issuer);
+const membershipData = new Map<string, StaffMembership>(
+  Object.values(roles).map(user => [user.id, { userId:user.id, tenantId:user.tenantId, role:user.role, active:true }]),
+);
+const currentMembership = createStaffMembershipChecker(async id => membershipData.get(id) ?? null);
 const app = express();
 app.use(express.json({limit: '8kb'}));
 const store = createSyntheticLeadStore();
@@ -77,7 +86,23 @@ app.post('/__synthetic/login', async (req, res) => {
     },
   });
 });
-app.use('/api/staff', createStaffCrmRouter(verifier, store));
+// Test-only grant controls: loopback and CI-only harness; never ship to production.
+app.post('/__synthetic/membership', (req, res) => {
+  if (req.get('x-synthetic-control') !== 'ci-fixture-only') return res.status(403).end();
+  const email = req.body?.email;
+  if (typeof email !== 'string' || !(email in roles)) return res.status(404).end();
+  const fixture = roles[email as keyof typeof roles];
+  const existing = membershipData.get(fixture.id)!;
+  const changed: StaffMembership = {
+    userId: fixture.id,
+    tenantId: req.body?.tenantId === A || req.body?.tenantId === B ? req.body.tenantId : existing.tenantId,
+    role: req.body?.role === 'viewer' ? 'viewer' : existing.role,
+    active: req.body?.active === false ? false : req.body?.active === true ? true : existing.active,
+  };
+  membershipData.set(fixture.id, changed);
+  return res.json({ synthetic:true, active:changed.active, role:changed.role });
+});
+app.use('/api/staff', createStaffCrmRouter(verifier, store, currentMembership));
 app.use('/api', requireInternalApiKey);
 app.use('/webhook', quarantineUnverifiedWebhook);
 app.use(express.static(path.resolve(process.cwd(),'dist'), {index:false}));
