@@ -55,3 +55,126 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION public.current_tenant_id() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.current_tenant_id() TO authenticated, service_role;
+
+-- The existing tenant policies have FOR ALL semantics. A viewer could
+-- otherwise write through the Supabase Data API even when the Express API
+-- correctly returns 403. Restrictive policies AND with existing RLS policies.
+-- Sales can write leads only. Lab owners/admins can manage operational tables.
+-- All end-user writes to immutable audit logs are prohibited; a reviewed
+-- backend service must perform audit-log ingestion.
+
+DROP POLICY IF EXISTS staff_write_insert_tenants ON public.tenants;
+CREATE POLICY staff_write_insert_tenants
+  ON public.tenants AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_update_tenants ON public.tenants;
+CREATE POLICY staff_write_update_tenants
+  ON public.tenants AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'))
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_delete_tenants ON public.tenants;
+CREATE POLICY staff_write_delete_tenants
+  ON public.tenants AS RESTRICTIVE FOR DELETE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_insert_agent_configs ON public.agent_configs;
+CREATE POLICY staff_write_insert_agent_configs
+  ON public.agent_configs AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_update_agent_configs ON public.agent_configs;
+CREATE POLICY staff_write_update_agent_configs
+  ON public.agent_configs AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'))
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_delete_agent_configs ON public.agent_configs;
+CREATE POLICY staff_write_delete_agent_configs
+  ON public.agent_configs AS RESTRICTIVE FOR DELETE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_insert_leads_crm ON public.leads_crm;
+CREATE POLICY staff_write_insert_leads_crm
+  ON public.leads_crm AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin', 'sales'));
+
+DROP POLICY IF EXISTS staff_write_update_leads_crm ON public.leads_crm;
+CREATE POLICY staff_write_update_leads_crm
+  ON public.leads_crm AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin', 'sales'))
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin', 'sales'));
+
+DROP POLICY IF EXISTS staff_write_delete_leads_crm ON public.leads_crm;
+CREATE POLICY staff_write_delete_leads_crm
+  ON public.leads_crm AS RESTRICTIVE FOR DELETE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin', 'sales'));
+
+DROP POLICY IF EXISTS staff_write_insert_agent_performance_logs ON public.agent_performance_logs;
+CREATE POLICY staff_write_insert_agent_performance_logs
+  ON public.agent_performance_logs AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_update_agent_performance_logs ON public.agent_performance_logs;
+CREATE POLICY staff_write_update_agent_performance_logs
+  ON public.agent_performance_logs AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'))
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_delete_agent_performance_logs ON public.agent_performance_logs;
+CREATE POLICY staff_write_delete_agent_performance_logs
+  ON public.agent_performance_logs AS RESTRICTIVE FOR DELETE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_insert_prompt_evolution_logs ON public.prompt_evolution_logs;
+CREATE POLICY staff_write_insert_prompt_evolution_logs
+  ON public.prompt_evolution_logs AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_update_prompt_evolution_logs ON public.prompt_evolution_logs;
+CREATE POLICY staff_write_update_prompt_evolution_logs
+  ON public.prompt_evolution_logs AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'))
+  WITH CHECK ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_delete_prompt_evolution_logs ON public.prompt_evolution_logs;
+CREATE POLICY staff_write_delete_prompt_evolution_logs
+  ON public.prompt_evolution_logs AS RESTRICTIVE FOR DELETE TO authenticated
+  USING ((SELECT public.current_tenant_id()) IS NOT NULL
+    AND (auth.jwt() -> 'app_metadata' ->> 'hrgen_role') IN ('owner', 'admin'));
+
+DROP POLICY IF EXISTS staff_write_insert_llm_fallback_audit_logs ON public.llm_fallback_audit_logs;
+CREATE POLICY staff_write_insert_llm_fallback_audit_logs
+  ON public.llm_fallback_audit_logs AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK (false);
+
+DROP POLICY IF EXISTS staff_write_update_llm_fallback_audit_logs ON public.llm_fallback_audit_logs;
+CREATE POLICY staff_write_update_llm_fallback_audit_logs
+  ON public.llm_fallback_audit_logs AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING (false)
+  WITH CHECK (false);
+
+DROP POLICY IF EXISTS staff_write_delete_llm_fallback_audit_logs ON public.llm_fallback_audit_logs;
+CREATE POLICY staff_write_delete_llm_fallback_audit_logs
+  ON public.llm_fallback_audit_logs AS RESTRICTIVE FOR DELETE TO authenticated
+  USING (false);
