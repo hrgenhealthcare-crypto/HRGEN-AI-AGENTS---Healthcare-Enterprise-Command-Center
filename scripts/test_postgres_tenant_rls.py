@@ -44,6 +44,9 @@ def main():
                 IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
                   CREATE ROLE authenticated NOLOGIN;
                 END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN
+                  CREATE ROLE anon NOLOGIN;
+                END IF;
                 IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
                   CREATE ROLE service_role NOLOGIN BYPASSRLS;
                 END IF;
@@ -66,6 +69,7 @@ def main():
                 "20261024000001_multi_tenant_schema.sql",
                 "20261105000001_trusted_tenant_claim.sql",
                 "20261108000001_audit_rls_and_tenant_pod_fks.sql",
+                "20261108000002_private_staff_memberships.sql",
             ]:
                 sql = (BASE / file).read_text(encoding="utf-8")
                 c.execute(sql)
@@ -262,6 +266,52 @@ def main():
             c.execute("RESET ROLE")
             c.execute("SELECT count(*) FROM public.leads_crm WHERE id=%s",(LEAD_B,))
             check(c.fetchone()[0]==1,"negative tests caused no B lead deletion")
+
+            # Membership authority: never readable/writable by browser roles.
+            c.execute("""
+                SELECT relrowsecurity, relforcerowsecurity
+                  FROM pg_class
+                 WHERE oid='public.staff_memberships'::regclass
+            """)
+            check(c.fetchone() == (True, True),
+                  "staff membership table RLS enabled and forced")
+            for role in ("anon", "authenticated"):
+                for privilege in ("SELECT","INSERT","UPDATE","DELETE"):
+                    c.execute("SELECT has_table_privilege(%s, 'public.staff_memberships', %s)",
+                              (role,privilege))
+                    check(c.fetchone()[0] is False,
+                          role+" cannot "+privilege+" membership authority")
+            for privilege in ("SELECT","INSERT","UPDATE","DELETE"):
+                c.execute("SELECT has_table_privilege('service_role', 'public.staff_memberships', %s)",
+                          (privilege,))
+                check(c.fetchone()[0] is (privilege=="SELECT"),
+                      "service_role "+privilege+" privilege restricted to SELECT")
+
+            user_a="11111111-1111-4111-8111-111111111111"
+            user_b="22222222-2222-4222-8222-222222222222"
+            c.execute("""
+                INSERT INTO public.staff_memberships (user_id,tenant_id,role,active)
+                VALUES (%s,%s,'sales',true), (%s,%s,'viewer',false)
+            """,(user_a,A,user_b,B))
+            c.execute("SET ROLE service_role")
+            c.execute("SELECT tenant_id::text,role,active FROM public.staff_memberships WHERE user_id=%s",(user_a,))
+            check(c.fetchone()==(A,"sales",True),
+                  "privileged server reader sees current synthetic membership")
+            try:
+                c.execute("UPDATE public.staff_memberships SET role='owner' WHERE user_id=%s",(user_a,))
+            except errors.InsufficientPrivilege:
+                check(True,"privileged read-only key cannot mutate membership")
+            else:
+                raise AssertionError("service_role unexpectedly changed grant")
+            c.execute("RESET ROLE")
+            c.execute("SET ROLE authenticated")
+            try:
+                c.execute("SELECT user_id FROM public.staff_memberships")
+            except errors.InsufficientPrivilege:
+                check(True,"authenticated browser cannot query staff memberships directly")
+            else:
+                raise AssertionError("authenticated browser read membership authority")
+            c.execute("RESET ROLE")
 
     print("RLS CI PASS — local PostgreSQL policies and synthetic FK tests only.",flush=True)
     print("NOT VERIFIED — actual Supabase JWT signer, deployed database, policies, grants, or login.")
