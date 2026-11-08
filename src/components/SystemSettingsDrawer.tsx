@@ -26,7 +26,7 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
     autoCreateCrmLead: true,
     whatsappAutoDispatch: true,
     webhookEndpointUrl: 'https://api.hrgen-agents.enterprise/webhooks/voice-events',
-    updatedAt: 'Active',
+    updatedAt: 'Unverified',
   });
 
   const [apiHealth, setApiHealth] = useState<{
@@ -35,10 +35,10 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
     voiceSynthReady: boolean;
     avgPingMs: number;
   }>({
-    geminiConnected: true,
-    multiLlmTiersReady: 5,
-    voiceSynthReady: true,
-    avgPingMs: 38,
+    geminiConnected: false,
+    multiLlmTiersReady: 0,
+    voiceSynthReady: false,
+    avgPingMs: 0,
   });
 
   const [testingPing, setTestingPing] = useState(false);
@@ -49,12 +49,12 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     fetch('/api/settings')
-      .then((res) => res.json())
+      .then((res) => {if(!res.ok) throw new Error('Private API authentication required');return res.json();})
       .then((data) => {
         if (data.settings) setSettings(data.settings);
         if (data.apiHealth) setApiHealth(data.apiHealth);
       })
-      .catch((err) => console.error('Failed to load settings:', err));
+      .catch(() => setStatusMessage('Private admin settings locked. A verified server-side login is required.'));
   }, [isOpen]);
 
   const handleTestApiHealth = async () => {
@@ -62,6 +62,7 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
     const start = Date.now();
     try {
       const res = await fetch('/api/settings');
+      if(!res.ok) throw new Error('Private API locked');
       const data = await res.json();
       const roundtrip = Math.max(24, Date.now() - start);
       if (data.apiHealth) {
@@ -70,10 +71,10 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
           avgPingMs: roundtrip,
         });
       }
-      setStatusMessage(`API & Voice Pipeline Verified (${roundtrip}ms roundtrip · 5/5 Tiers Online)`);
+      setStatusMessage(`Authenticated settings endpoint responded in ${roundtrip}ms. Voice and LLM provider readiness still needs separate tests.`);
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (e) {
-      console.error(e);
+      setStatusMessage('API check blocked: server-side authentication or provider verification is required.');
     } finally {
       setTestingPing(false);
     }
@@ -87,6 +88,7 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
+      if(!res.ok) throw new Error('Private API locked');
       const data = await res.json();
       if (data.settings) {
         setSettings(data.settings);
@@ -94,7 +96,7 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
         setTimeout(() => setStatusMessage(null), 3500);
       }
     } catch (e) {
-      console.error(e);
+      setStatusMessage('Settings were NOT saved. Private backend login is required.');
     } finally {
       setSaving(false);
     }
@@ -104,6 +106,7 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
     setDownloadingBundle(true);
     try {
       const res = await fetch('/api/export/bundle');
+      if(!res.ok) throw new Error('Private API locked');
       const data = await res.json();
       const payload = JSON.stringify(data.bundle || data, null, 2);
       const blob = new Blob([payload], { type: 'application/json' });
@@ -118,7 +121,7 @@ export const SystemSettingsDrawer: React.FC<SystemSettingsDrawerProps> = ({
       setStatusMessage('Downloaded complete Trained Agents + Hermes Memory Bundle (.json).');
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (e) {
-      console.error(e);
+      setStatusMessage('Export blocked. No agent memory or configuration bundle was downloaded.');
     } finally {
       setDownloadingBundle(false);
     }
