@@ -30,6 +30,14 @@ try{
   await mobile.screenshot({path:'artifacts/workflow-twin/02-mobile-flow.png'});
   await mobile.getByRole('tab',{name:'Review'}).click();
   await mobile.locator('.hwt-mobile-view-toggle').getByRole('button',{name:'Super Admin'}).click();
+  const gia=mobile.getByRole('region',{name:'GIA integration readiness'});
+  await gia.waitFor({state:'visible'});
+  await gia.getByRole('button',{name:'Show verification matrix'}).click();
+  assert.equal(await gia.locator('.hwt-gia-gate').count(),6);
+  assert.equal(await gia.locator('.hwt-gia-state.is-archive').count(),2);
+  assert.equal(await gia.locator('.hwt-gia-state.is-hold').count(),4);
+  await gia.screenshot({path:'artifacts/workflow-twin/06-mobile-gia-readiness.png'});
+
   await mobile.locator('.hwt-pitch-kit summary').click();
   await mobile.getByRole('textbox',{name:'Business / lead name'}).fill('Sample Diagnostic Center');
   const draft=await mobile.locator('.hwt-pitch-message textarea').inputValue();
@@ -71,7 +79,7 @@ try{
   assert.equal(await desktop.getByRole('tab',{name:'Build'}).isVisible(),false,'Mobile-only tabs should be hidden on desktop');
   await desktop.close();
   assert.deepEqual(problems,[],'Unhandled browser page errors found');
-  console.log('BROWSER_QA_PASS: mobile Build/Flow/Review, tap interaction, verified logo display, sales pitch, Escape, desktop board');
+  console.log('BROWSER_QA_PASS: mobile Build/Flow/Review, GIA read-only release matrix, tap interaction, verified logo display, sales pitch, Escape, desktop board');
 }catch(error){
   console.error('BROWSER_QA_FAIL:',error);
   if(problems.length)console.error('PAGE_ERRORS:',problems.join(' | '));
