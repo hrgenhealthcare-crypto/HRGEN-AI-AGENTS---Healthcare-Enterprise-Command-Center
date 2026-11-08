@@ -8,6 +8,7 @@ import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
 import { requireInternalApiKey } from './security/internalApiGuard';
 import { staffVerifierFromEnvironment } from './security/staffJwt';
+import { staffMembershipCheckerFromEnvironment } from './security/supabaseMembership';
 import { createStaffCrmRouter, createSyntheticLeadStore } from './security/staffRoutes';
 import { quarantineUnverifiedWebhook } from './security/quarantineWebhook';
 
@@ -30,7 +31,11 @@ if (process.env.NODE_ENV === 'production') {
     res.status(503).json({ error: 'Staff CRM is not released' });
   });
 } else {
-  app.use('/api/staff', createStaffCrmRouter(staffVerifierFromEnvironment(), createSyntheticLeadStore()));
+  app.use('/api/staff', createStaffCrmRouter(
+    staffVerifierFromEnvironment(),
+    createSyntheticLeadStore(),
+    staffMembershipCheckerFromEnvironment(),
+  ));
 }
 
 /**
