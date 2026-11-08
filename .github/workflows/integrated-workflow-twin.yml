@@ -1,0 +1,46 @@
+name: HRGen Integrated Workflow Twin QA
+
+on:
+  push:
+    branches: [feature/hrgen-integrated-workflow-20261108]
+  pull_request:
+    branches: [integration/security-crm-voice-20261108]
+
+permissions:
+  contents: read
+
+jobs:
+  combine-security-and-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Existing signed staff CRM and tenant guard regressions
+        run: npm run test:security
+      - name: Workflow Twin rules, branding and graph regressions
+        run: npx tsx --test tests/workflowTwin.test.ts tests/workflowTwinBrand.test.ts
+      - name: TypeScript
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Chromium install
+        run: npx playwright install --with-deps chromium
+      - name: Mobile/desktop browser interactive QA
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/hrgen-preview.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          node tests/workflowTwin.browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hrgen-integrated-workflow-browser-qa
+          path: artifacts/workflow-twin/
+          if-no-files-found: warn
