@@ -99,6 +99,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.pod) {
         setPods((prev) => prev.map((p) => (p.id === podId ? data.pod : p)));
@@ -131,6 +132,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(leadData),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.lead) {
         setLeads((prev) => [data.lead, ...prev]);
@@ -150,6 +152,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage }),
       });
+      if (!res.ok) throw new Error('Private API authorization required');
       const data = await res.json();
       if (data.lead) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? data.lead : l)));
@@ -167,7 +170,7 @@ export default function App() {
     // Provisioning needs authenticated quote acceptance + payment verification.
     setIsPricingDrawerOpen(false);
     setIsWorkflowTwinOpen(true);
-    showToast(`Quote requested for ${service.name}. No license, payment or order was created.`);
+    showToast(`Quotation draft selected: ${service.name}. No license, payment or order was created.`);
   };
 
   const handleConciergeEscalateToVoice = (podId: string, visitorName: string, _query: string) => {
