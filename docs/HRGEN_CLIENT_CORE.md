@@ -13,16 +13,16 @@
 
 ## Runtime and persistence
 
-Required: Node **22.13+**, npm dependencies already used by the existing Express + Vite app, and a **persistent writable volume**. Built-in SQLite remains experimental in Node 22; this version is intended for a single Node process and should not be deployed behind multiple replicas or on ephemeral storage.
+Required: Node **22.13+**, Bun lockfile dependencies already used by the existing Express + Vite app, and a **persistent writable volume**. Built-in SQLite remains experimental in Node 22; this version is intended for a single Node process and should not be deployed behind multiple replicas or on ephemeral storage.
 
 ```bash
 export HRGEN_CORE_DB_DIR=/var/lib/hrgen/client-core
 export HRGEN_BOOTSTRAP_EMAIL=founder@example.com
 export HRGEN_BOOTSTRAP_PASSWORD='use-a-long-unique-password-at-least-12-characters'
 export NODE_ENV=production
-npm ci
-npm run build
-npm start
+bun install --frozen-lockfile
+bun run build
+bun run start
 ```
 
 **Do not commit secrets or actual patient data.** After initial admin creation, remove `HRGEN_BOOTSTRAP_PASSWORD` and `HRGEN_BOOTSTRAP_EMAIL` from the runtime environment. Change the password through `POST /api/v1/auth/password` after signing in. The original old API endpoints are blocked in production when integration patch is applied. If the core storage env is not configured, no new routes are available and the production legacy APIs still fail closed.
