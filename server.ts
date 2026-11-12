@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
+import { mountTenantRoutes } from './src/server/tenantRoutes.mjs';
 
 dotenv.config();
 
@@ -16,6 +17,29 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json());
+
+// HRGen real client-core: separate client data, server-authorized roles, real bookings.
+// No default credentials. Mount only with explicit persistent storage configured.
+if (process.env.HRGEN_CORE_DB_DIR) {
+  mountTenantRoutes(app, {
+    dir: process.env.HRGEN_CORE_DB_DIR,
+    bootstrapEmail: process.env.HRGEN_BOOTSTRAP_EMAIL,
+    bootstrapPassword: process.env.HRGEN_BOOTSTRAP_PASSWORD,
+  });
+}
+
+// Legacy mock endpoints expose seeded records; never publish them in production.
+// New authenticated /api/v1 handlers are registered above this fail-closed guard.
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api', (_req, res) => {
+    res.status(410).json({
+      success: false,
+      error: 'LEGACY_API_DISABLED',
+      message: 'Use authenticated /api/v1 endpoints.',
+    });
+  });
+}
+
 
 // Initialize GoogleGenAI server-side with telemetry header
 const ai = new GoogleGenAI({
