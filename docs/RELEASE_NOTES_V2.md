@@ -5,7 +5,7 @@ Status: source patch and test release candidate. This is **not** a hosted live d
 ## Actual implementation
 - v1 forward migration preserves existing client/service/booking records; new columns `booking_enabled`, `privacy_url`, `assigned_to`, booking events are added.
 - Public booking starts **disabled** for all tenants, including pre-existing tenants after upgrade. Owner must enter a published HTTPS privacy notice and explicitly enable it. Requests cannot be accepted without positive user consent.
-- Owner/staff workflow: create staff -> confirm booking -> owner assigns to same-client staff -> assigned staff marks collected. Cancellation is available before collection, invalid transitions are blocked.
+- Owner/staff workflow: create staff -> owner confirms booking -> owner assigns to same-client staff -> assigned staff marks collected. Staff see only appointments assigned to them. Cancellation is available before collection, invalid transitions are blocked.
 - Booking timeline events stored with actor and timestamp; cross-tenant assignment denied.
 - Privileged client-data export, no password hashes, no staff access. Exports contain personal information and must be protected.
 - Operational SQLite snapshot backup + integrity/checksum verify CLI, no automated live restore; backup contains personal data and requires encryption and offline restore drills. Backups taken across multiple SQLite files are **not an atomic cross-database snapshot**, so pause writes for a consistent disaster recovery point.
