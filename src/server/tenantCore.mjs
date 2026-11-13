@@ -29,6 +29,8 @@ const tenantSchema = `
  CREATE TABLE IF NOT EXISTS services (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', price_inr INTEGER NOT NULL CHECK(price_inr >= 0), active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS bookings (id TEXT PRIMARY KEY, ref TEXT UNIQUE NOT NULL, service_id TEXT NOT NULL REFERENCES services(id), customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL, preferred_date TEXT NOT NULL, address TEXT NOT NULL DEFAULT '', consent_at TEXT NOT NULL, consent_version TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('new','confirmed','assigned','collected','cancelled')), created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL, company TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', stage TEXT NOT NULL CHECK(stage IN ('new','contacted','proposal_sent','won','lost')), created_at TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS ai_drafts (id TEXT PRIMARY KEY,kind TEXT NOT NULL CHECK(kind IN ('seo_pack','social_post','whatsapp_template')),brief TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN ('generating','review','approved','discarded','failed')),content TEXT NOT NULL DEFAULT '',model TEXT NOT NULL DEFAULT '',input_tokens INTEGER NOT NULL DEFAULT 0,output_tokens INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+ CREATE INDEX IF NOT EXISTS ix_ai_drafts_created ON ai_drafts(created_at DESC);
  CREATE TABLE IF NOT EXISTS booking_events (id TEXT PRIMARY KEY, booking_id TEXT NOT NULL REFERENCES bookings(id), kind TEXT NOT NULL, actor_id TEXT, detail TEXT NOT NULL DEFAULT '', at TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS ix_booking_events_booking ON booking_events(booking_id,at);
  CREATE INDEX IF NOT EXISTS ix_bookings_created ON bookings(created_at DESC);
@@ -226,7 +228,73 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     audit(actor,'tenant.export',tid,tid);
     return snapshot;
   }
+  // AI text generation is OWNER-ONLY, tenant-isolated, opt-in, and never auto-publishes.
+  const aiTypes = ['seo_pack','social_post','whatsapp_template'];
+  // Fixed, enumerated language/voice options. No free-text patient, lead or booking input reaches AI.
+  const safeAiStyles = new Set(['English, professional','Hindi, professional','Hinglish, friendly','English, premium','Hindi, simple','Hinglish, simple']);
+  function aiSafeBrief(value){
+    if(!safeAiStyles.has(value)) fail('AI_PRIVACY_BLOCK','Use only the approved language and style options',400);
+    return value;
+  }
+  function aiContext(actor,requested){
+    onlyOwner(actor);
+    const cfg=config(actor,requested), tid=cfg.id;
+    // Only public business identity and active approved service NAMES go to the model. Never leads/bookings/customer records.
+    const services=tenantDb(tid).prepare('SELECT name FROM services WHERE active=1 ORDER BY created_at DESC LIMIT 12').all().map(x=>x.name);
+    return {tenantId:tid,business:cfg.name,tagline:cfg.tagline,services};
+  }
+  function aiUsage(actor,requested){
+    const tid=aiContext(actor,requested).tenantId;
+    const date=now().slice(0,10);
+    const td=tenantDb(tid);
+    const stats=td.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(input_tokens),0) AS inputTokens, COALESCE(SUM(output_tokens),0) AS outputTokens FROM ai_drafts WHERE created_at >= ?').get(date+'T00:00:00.000Z');
+    return {used:stats.n,limit:10,remaining:Math.max(0,10-stats.n),inputTokens:stats.inputTokens,outputTokens:stats.outputTokens,timeZone:'UTC',requiresHumanReview:true};
+  }
+  function beginAiDraft(actor,requested,{kind,brief=''}){
+    const ctx=aiContext(actor,requested);
+    if(!aiTypes.includes(kind))fail('INVALID_AI_KIND','Unsupported content type');
+    const safeBrief=aiSafeBrief(brief);
+    const td=tenantDb(ctx.tenantId);
+    const usage=aiUsage(actor,ctx.tenantId);
+    if(usage.remaining<=0)fail('AI_DAILY_LIMIT','Daily AI draft limit reached',429);
+    const id=randomUUID(),at=now();
+    td.prepare('INSERT INTO ai_drafts(id,kind,brief,status,created_at,updated_at) VALUES (?,?,?,?,?,?)').run(id,kind,safeBrief,'generating',at,at);
+    audit(actor,'ai.draft_requested',id,ctx.tenantId);
+    return {id,kind,brief:safeBrief,ctx};
+  }
+  function finishAiDraft(actor,requested,id,{text,model='unknown',inputTokens=0,outputTokens=0}){
+    const tid=aiContext(actor,requested).tenantId;
+    if(typeof text!=='string'||text.trim().length<12)fail('AI_EMPTY_OUTPUT','Model returned no usable draft',502);
+    const td=tenantDb(tid),result=td.prepare('UPDATE ai_drafts SET content=?,model=?,input_tokens=?,output_tokens=?,status=?,updated_at=? WHERE id=? AND status=?')
+      .run(text.trim().slice(0,7000),cleaned(model,80),Number.isSafeInteger(inputTokens)?Math.max(0,inputTokens):0,Number.isSafeInteger(outputTokens)?Math.max(0,outputTokens):0,'review',now(),id,'generating');
+    if(!result.changes)fail('AI_DRAFT_NOT_FOUND','Draft not found',404);
+    audit(actor,'ai.draft_generated',id,tid);
+    return td.prepare('SELECT id,kind,status,content,model,input_tokens AS inputTokens,output_tokens AS outputTokens,created_at AS createdAt FROM ai_drafts WHERE id=?').get(id);
+  }
+  function failAiDraft(actor,requested,id){
+    const tid=aiContext(actor,requested).tenantId;
+    tenantDb(tid).prepare('UPDATE ai_drafts SET status=?,updated_at=? WHERE id=? AND status=?').run('failed',now(),id,'generating');
+    audit(actor,'ai.draft_failed',id,tid);
+  }
+  function listAiDrafts(actor,requested){
+    const tid=aiContext(actor,requested).tenantId;
+    return tenantDb(tid).prepare('SELECT id,kind,brief,status,content,model,input_tokens AS inputTokens,output_tokens AS outputTokens,created_at AS createdAt,updated_at AS updatedAt FROM ai_drafts ORDER BY created_at DESC LIMIT 40').all();
+  }
+  function reviewAiDraft(actor,requested,id,status){
+    const tid=aiContext(actor,requested).tenantId;
+    if(!['approved','discarded'].includes(status))fail('INVALID_AI_STATUS','Review status invalid');
+    const td=tenantDb(tid),result=td.prepare('UPDATE ai_drafts SET status=?,updated_at=? WHERE id=? AND status=?').run(status,now(),id,'review');
+    if(!result.changes)fail('AI_REVIEW_FAILED','Draft is missing or no longer in review',409);
+    audit(actor,'ai.draft_'+status,id,tid);
+    return {id,status,autoPublished:false};
+  }
+  function leadFollowupQueue(actor,requested){
+    onlyOwner(actor);
+    const tid=selectedTenant(actor,requested);
+    const records=tenantDb(tid).prepare("SELECT id,name,company,stage,created_at AS createdAt FROM leads WHERE stage IN ('proposal_sent','contacted','new') ORDER BY CASE stage WHEN 'proposal_sent' THEN 1 WHEN 'contacted' THEN 2 ELSE 3 END,created_at ASC LIMIT 50").all();
+    return records.map(r=>({...r,reason:r.stage==='proposal_sent'?'Proposal follow-up':r.stage==='contacted'?'Continue conversation':'First contact',method:'rules-based, not AI'}));
+  }
   function listAudit(actor,requested){onlyOwner(actor);const tid=selectedTenant(actor,requested);return db.prepare('SELECT action,target_id AS targetId,at FROM audit WHERE tenant_id=? ORDER BY at DESC LIMIT 100').all(tid);}
   function close(){for(const t of cache.values())t.close();db.close();}
-  return {login,session,logout,changePassword,createTenant,listTenants,configBySlug,config,updateConfig,addUser,listStaff,servicesBySlug,listServices,addService,setServiceActive,book,bookings,setBookingStatus,assignBooking,bookingEvents,listLeads,addLead,setLeadStage,listAudit,exportTenant,close};
+  return {login,session,logout,changePassword,createTenant,listTenants,configBySlug,config,updateConfig,addUser,servicesBySlug,listServices,setServiceActive,addService,book,bookings,setBookingStatus,assignBooking,bookingEvents,listStaff,listLeads,addLead,setLeadStage,exportTenant,listAudit,aiContext,aiUsage,beginAiDraft,finishAiDraft,failAiDraft,listAiDrafts,reviewAiDraft,leadFollowupQueue,close};
 }
