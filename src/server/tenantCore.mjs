@@ -165,13 +165,19 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     audit(null,'booking.public_create',id,t.id);
     return {id,reference:ref,status:'new'};
   }
-  function bookings(actor,requested){const tid=selectedTenant(actor,requested);return tenantDb(tid).prepare(`SELECT b.id,b.ref AS reference,s.name AS service,b.customer_name AS customerName,b.customer_phone AS customerPhone,b.preferred_date AS preferredDate,b.address,b.status,b.assigned_to AS assignedTo,b.created_at AS createdAt FROM bookings b JOIN services s ON s.id=b.service_id ORDER BY b.created_at DESC LIMIT 200`).all();}
+  function bookings(actor,requested){
+    const tid=selectedTenant(actor,requested);
+    const sql=`SELECT b.id,b.ref AS reference,s.name AS service,b.customer_name AS customerName,b.customer_phone AS customerPhone,b.preferred_date AS preferredDate,b.address,b.status,b.assigned_to AS assignedTo,b.created_at AS createdAt FROM bookings b JOIN services s ON s.id=b.service_id`;
+    // Staff see only their own assigned appointments; owners/founder see whole client queue.
+    return actor.role==='staff' ? tenantDb(tid).prepare(sql+' WHERE b.assigned_to=? ORDER BY b.created_at DESC LIMIT 200').all(actor.id) : tenantDb(tid).prepare(sql+' ORDER BY b.created_at DESC LIMIT 200').all();
+  }
   // Deliberately restrict state transitions: collection requires an assigned staff member.
   const transitions={new:['confirmed','cancelled'],confirmed:['cancelled'],assigned:['collected','cancelled'],collected:[],cancelled:[]};
   function setBookingStatus(actor,requested,id,status){
     const tid=selectedTenant(actor,requested);if(!['confirmed','collected','cancelled'].includes(status))fail('INVALID_STATUS','Unsupported booking transition');
     const td=tenantDb(tid),old=td.prepare('SELECT id,status,assigned_to AS assignedTo FROM bookings WHERE id=?').get(id);
     if(!old)fail('NOT_FOUND','Booking not found',404);
+    if(actor.role==='staff'&&old.assignedTo!==actor.id)fail('FORBIDDEN','Staff may update only their assigned bookings',403);
     if(!transitions[old.status]?.includes(status))fail('INVALID_TRANSITION','Booking status transition is not allowed',409);
     if(old.status==='assigned'&&actor.role==='staff'&&old.assignedTo!==actor.id)fail('FORBIDDEN','Only assigned staff may complete or cancel this booking',403);
     const result=td.prepare('UPDATE bookings SET status=? WHERE id=? AND status=?').run(status,id,old.status);
@@ -199,6 +205,7 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     const tid=selectedTenant(actor,requested),td=tenantDb(tid);
     const booking=td.prepare('SELECT id FROM bookings WHERE id=?').get(bookingId);
     if(!booking)fail('NOT_FOUND','Booking not found',404);
+    if(actor.role==='staff'&&!td.prepare('SELECT id FROM bookings WHERE id=? AND assigned_to=?').get(bookingId,actor.id))fail('FORBIDDEN','Staff may view only assigned booking events',403);
     return td.prepare('SELECT kind,actor_id AS actorId,at FROM booking_events WHERE booking_id=? ORDER BY at,id').all(bookingId);
   }
   function listLeads(actor,requested){const tid=selectedTenant(actor,requested);return tenantDb(tid).prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT 200').all();}
@@ -219,7 +226,7 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     audit(actor,'tenant.export',tid,tid);
     return snapshot;
   }
-  function listAudit(actor,requested){const tid=selectedTenant(actor,requested);return db.prepare('SELECT action,target_id AS targetId,at FROM audit WHERE tenant_id=? ORDER BY at DESC LIMIT 100').all(tid);}
+  function listAudit(actor,requested){onlyOwner(actor);const tid=selectedTenant(actor,requested);return db.prepare('SELECT action,target_id AS targetId,at FROM audit WHERE tenant_id=? ORDER BY at DESC LIMIT 100').all(tid);}
   function close(){for(const t of cache.values())t.close();db.close();}
   return {login,session,logout,changePassword,createTenant,listTenants,configBySlug,config,updateConfig,addUser,listStaff,servicesBySlug,listServices,addService,setServiceActive,book,bookings,setBookingStatus,assignBooking,bookingEvents,listLeads,addLead,setLeadStage,listAudit,exportTenant,close};
 }
