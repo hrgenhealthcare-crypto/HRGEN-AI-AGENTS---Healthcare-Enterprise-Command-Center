@@ -3,6 +3,10 @@ import { workspaceHtml, bookingHtml } from './tenantUI.mjs';
 import { makeGrowthPrompt, safeProviderResult } from './aiStudio.mjs';
 
 // Mount BEFORE any legacy /api routes and before the SPA catch-all.
+/**
+ * @param {import('express').Express} app
+ * @param {{dir:string,bootstrapEmail?:string,bootstrapPassword?:string,aiEnabled?:boolean,generateAi?: ((args:{prompt:string,signal:AbortSignal})=>Promise<{text:string,model?:string,inputTokens?:number,outputTokens?:number}>) | null}} config
+ */
 export function mountTenantRoutes(app,{dir,bootstrapEmail,bootstrapPassword,generateAi=null,aiEnabled=false}) {
   const core=createTenantCore({dir,bootstrapEmail,bootstrapPassword});
   const limiters=new Map();
