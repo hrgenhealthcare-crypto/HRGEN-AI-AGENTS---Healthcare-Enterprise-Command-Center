@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import express from 'express';
+import { mountTenantRoutes } from '../src/server/tenantRoutes.mjs';
+
+test('real HTTP: two clients, protected routes, consented booking, restricted assignment and export',async t=>{
+  const dir=mkdtempSync(path.join(os.tmpdir(),'hrgen-http-'));
+  const app=express();app.use(express.json());
+  const core=mountTenantRoutes(app,{dir,bootstrapEmail:'founder@hrgen.invalid',bootstrapPassword:'StrongFounderPassword!'});
+  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
+  t.after(async()=>{await new Promise(resolve=>server.close(resolve));core.close();rmSync(dir,{recursive:true,force:true});});
+  const origin=`http://127.0.0.1:${server.address().port}`;
+  async function req(method,url,body,token){const res=await fetch(origin+url,{method,headers:{...(body?{'content-type':'application/json'}:{}),...(token?{authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});return {status:res.status,data:await res.json()};}
+  const login=(email,password)=>req('POST','/api/v1/auth/login',{email,password});
+  const a=await login('founder@hrgen.invalid','StrongFounderPassword!');assert.equal(a.status,200);
+  const ft=a.data.data.token;
+  const create=(slug,ownerEmail)=>req('POST','/api/v1/platform/tenants',{slug,name:slug,ownerEmail,ownerPassword:'StrongOwnerPassword!',phone:'9876543210'},ft);
+  const alpha=(await create('alpha-lab','a@alpha.invalid')).data.data;
+  const beta=(await create('beta-lab','b@beta.invalid')).data.data;
+  const ta=(await login('a@alpha.invalid','StrongOwnerPassword!')).data.data.token;
+  const tb=(await login('b@beta.invalid','StrongOwnerPassword!')).data.data.token;
+  assert.equal((await req('GET','/api/v1/workspace/bookings')).status,401);
+  assert.equal((await req('GET','/api/v1/workspace/bookings?tenantId='+alpha.id,undefined,tb)).status,403);
+  assert.equal((await req('GET','/api/v1/public/alpha-lab')).data.data.bookingEnabled,0);
+  assert.equal((await req('PATCH','/api/v1/workspace/config',{bookingEnabled:true},ta)).status,409);
+  assert.equal((await req('PATCH','/api/v1/workspace/config',{bookingEnabled:true,privacyUrl:'https://alpha.example/privacy'},ta)).status,200);
+  const svc=(await req('POST','/api/v1/workspace/services',{name:'CBC',priceInr:350},ta)).data.data;
+  assert.equal((await req('POST','/api/v1/public/beta-lab/bookings',{serviceId:svc.id,customerName:'Test',customerPhone:'9876543210',preferredDate:'2026-12-20',consent:true})).status,409);
+  const booked=await req('POST','/api/v1/public/alpha-lab/bookings',{serviceId:svc.id,customerName:'Test Customer',customerPhone:'9876543210',preferredDate:'2026-12-20',consent:true});
+  assert.equal(booked.status,200,JSON.stringify(booked.data));
+  const bid=booked.data.data.id;
+  const staff=(await req('POST','/api/v1/platform/users',{email:'staff@alpha.invalid',password:'StrongStaffPassword!',role:'staff'},ta)).data.data;
+  assert.equal((await req('PATCH','/api/v1/workspace/bookings/'+bid,{status:'confirmed'},ta)).status,200);
+  assert.equal((await req('POST','/api/v1/workspace/bookings/'+bid+'/assign',{staffId:staff.id},tb)).status,404);
+  assert.equal((await req('POST','/api/v1/workspace/bookings/'+bid+'/assign',{staffId:staff.id},ta)).status,200);
+  const ts=(await login('staff@alpha.invalid','StrongStaffPassword!')).data.data.token;
+  assert.equal((await req('GET','/api/v1/workspace/bookings',undefined,ts)).data.data.length,1);
+  assert.equal((await req('GET','/api/v1/workspace/audit',undefined,ts)).status,403);
+  assert.equal((await req('PATCH','/api/v1/workspace/bookings/'+bid,{status:'collected'},ts)).status,200);
+  assert.deepEqual((await req('GET','/api/v1/workspace/bookings/'+bid+'/events',undefined,ta)).data.data.map(e=>e.kind),['requested','confirmed','assigned','collected']);
+  assert.equal((await req('GET','/api/v1/workspace/export',undefined,ts)).status,403);
+  assert.equal((await req('GET','/api/v1/workspace/export',undefined,tb)).data.data.bookings.length,0);
+  assert.equal((await req('GET','/api/v1/workspace/export',undefined,ta)).data.data.bookings.length,1);
+  assert.equal((await req('GET','/api/v1/workspace/audit',undefined,ta)).status,200);
+});

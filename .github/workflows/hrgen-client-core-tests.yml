@@ -1,0 +1,39 @@
+name: HRGen Client Core and AI Growth Tests
+on:
+  pull_request:
+    paths:
+      - 'server.ts'
+      - 'src/server/**'
+      - 'tests/tenantCore.test.mjs'
+      - 'tests/tenantHttp.test.mjs'
+      - 'tests/aiStudio.test.mjs'
+      - 'tests/aiHttp.test.mjs'
+      - '.github/workflows/hrgen-client-core-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server.ts'
+      - 'src/server/**'
+      - 'tests/tenantCore.test.mjs'
+      - 'tests/tenantHttp.test.mjs'
+      - 'tests/aiStudio.test.mjs'
+      - 'tests/aiHttp.test.mjs'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - uses: oven-sh/setup-bun@v2
+      - name: Install exact locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Type-check existing application
+        run: bun run lint
+      - name: Build existing React and Express application
+        run: bun run build
+      - name: Verify tenant isolation, AI permissions and real HTTP routes
+        run: node --test tests/tenantCore.test.mjs tests/tenantHttp.test.mjs tests/aiStudio.test.mjs tests/aiHttp.test.mjs
