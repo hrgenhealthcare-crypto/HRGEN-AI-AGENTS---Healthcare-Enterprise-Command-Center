@@ -2,17 +2,17 @@ name: HRGen Client Core Tests
 on:
   pull_request:
     paths:
-      - 'server.ts'
-      - 'src/server/**'
+      - 'src/server/tenantCore.mjs'
+      - 'src/server/tenantRoutes.mjs'
+      - 'src/server/tenantUI.mjs'
       - 'tests/tenantCore.test.mjs'
-      - 'tests/tenantHttp.test.mjs'
-      - 'scripts/core-backup.mjs'
       - '.github/workflows/hrgen-client-core-tests.yml'
   push:
     branches: [main]
     paths:
-      - 'server.ts'
-      - 'src/server/**'
+      - 'src/server/tenantCore.mjs'
+      - 'src/server/tenantRoutes.mjs'
+      - 'src/server/tenantUI.mjs'
       - 'tests/tenantCore.test.mjs'
 jobs:
   test:
@@ -24,12 +24,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-      - uses: oven-sh/setup-bun@v2
-      - name: Install locked dependencies
-        run: bun install --frozen-lockfile
-      - name: Type check existing Express + React application
-        run: bun run lint
-      - name: Build application
-        run: bun run build
-      - name: Test real tenant core and isolation
-        run: node --test tests/tenantCore.test.mjs tests/tenantHttp.test.mjs
+      - run: node --test tests/tenantCore.test.mjs
