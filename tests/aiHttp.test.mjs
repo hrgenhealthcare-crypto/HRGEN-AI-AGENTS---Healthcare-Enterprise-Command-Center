@@ -47,7 +47,7 @@ test('AI HTTP: real owner auth, cross-tenant denial, draft review, no auto publi
   assert.equal((await req('GET','/api/v1/workspace/ai/status',undefined,a)).data.data.outputTokens,60);
   const staff=(await req('POST','/api/v1/platform/users',{email:'staff@alpha.invalid',password:'StrongStaffPass!123',role:'staff'},a)).data.data;
   const st=(await req('POST','/api/v1/auth/login',{email:'staff@alpha.invalid',password:'StrongStaffPass!123'})).data.data.token;
-  assert.equal(st.role,'staff');
+  assert.equal(staff.role,'staff');
   assert.equal((await req('GET','/api/v1/workspace/ai/drafts',undefined,st)).status,403);
   assert.equal((await req('GET','/api/v1/workspace/followups',undefined,st)).status,403);
   assert.equal(alpha.slug,'alpha-lab');
