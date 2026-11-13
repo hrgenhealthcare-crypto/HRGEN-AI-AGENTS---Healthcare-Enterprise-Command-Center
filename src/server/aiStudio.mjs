@@ -29,6 +29,7 @@ export function safeProviderResult(result) {
     outputTokens: Number.isSafeInteger(result.outputTokens) ? result.outputTokens : 0,
   };
 }
+/** @param {{apiKey?: string, model?: string, fetchImpl?: typeof fetch}} [config] */
 export function makeGeminiGenerator({apiKey, model = 'gemini-2.5-flash', fetchImpl = fetch} = {}) {
   if (!apiKey || typeof apiKey !== 'string') throw new Error('Gemini key not configured');
   if (!/^[a-z0-9][a-z0-9.\-_]{1,79}$/i.test(model)) throw new Error('Invalid model configuration');
