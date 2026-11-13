@@ -19,9 +19,9 @@ export function mountTenantRoutes(app,{dir,bootstrapEmail,bootstrapPassword}) {
   };
   const user=(req)=>{const m=/^Bearer (\S+)$/.exec(req.get('authorization')||'');return core.session(m?.[1]);};
   const tenant=(req)=>req.query.tenantId || undefined;
-  app.get('/workspace',(_req,res)=>{res.set('Cache-Control','no-store');res.type('html').send(workspaceHtml);});
-  app.get('/book/:slug',(_req,res)=>{res.set('Cache-Control','no-store');res.type('html').send(bookingHtml);});
-  app.get('/api/v1/health',route(()=>({service:'hrgen-client-core',version:'1.0.0',status:'running'})));
+  app.get('/workspace',(_req,res)=>{res.set('Cache-Control','no-store');res.set('Referrer-Policy','no-referrer');res.set('X-Content-Type-Options','nosniff');res.type('html').send(workspaceHtml);});
+  app.get('/book/:slug',(_req,res)=>{res.set('Cache-Control','no-store');res.set('Referrer-Policy','no-referrer');res.set('X-Content-Type-Options','nosniff');res.type('html').send(bookingHtml);});
+  app.get('/api/v1/health',route(()=>({service:'hrgen-client-core',version:'2.0.0',status:'running'})));
   app.post('/api/v1/auth/login',route((req)=>{limit(req,'login',8,15*60*1000);return core.login(req.body?.email,req.body?.password); }));
   app.post('/api/v1/auth/logout',route((req)=>{const match=/^Bearer (\S+)$/.exec(req.get('authorization')||'');user(req);core.logout(match[1]);return {signedOut:true};}));
   app.post('/api/v1/auth/password',route((req)=>core.changePassword(user(req),req.body?.oldPassword,req.body?.newPassword)));
@@ -34,11 +34,15 @@ export function mountTenantRoutes(app,{dir,bootstrapEmail,bootstrapPassword}) {
   app.get('/api/v1/workspace/services',route((req)=>core.listServices(user(req),tenant(req))));
   app.post('/api/v1/workspace/services',route((req)=>core.addService(user(req),tenant(req),req.body||{})));
   app.patch('/api/v1/workspace/services/:id',route((req)=>core.setServiceActive(user(req),tenant(req),req.params.id,req.body?.active)));
+  app.get('/api/v1/workspace/staff',route((req)=>core.listStaff(user(req),tenant(req))));
   app.get('/api/v1/workspace/bookings',route((req)=>core.bookings(user(req),tenant(req))));
+  app.post('/api/v1/workspace/bookings/:id/assign',route((req)=>core.assignBooking(user(req),tenant(req),req.params.id,req.body?.staffId)));
+  app.get('/api/v1/workspace/bookings/:id/events',route((req)=>core.bookingEvents(user(req),tenant(req),req.params.id)));
   app.patch('/api/v1/workspace/bookings/:id',route((req)=>core.setBookingStatus(user(req),tenant(req),req.params.id,req.body?.status)));
   app.get('/api/v1/workspace/leads',route((req)=>core.listLeads(user(req),tenant(req))));
   app.post('/api/v1/workspace/leads',route((req)=>core.addLead(user(req),tenant(req),req.body||{})));
   app.patch('/api/v1/workspace/leads/:id',route((req)=>core.setLeadStage(user(req),tenant(req),req.params.id,req.body?.stage)));
+  app.get('/api/v1/workspace/export',route((req)=>core.exportTenant(user(req),tenant(req))));
   app.get('/api/v1/workspace/audit',route((req)=>core.listAudit(user(req),tenant(req))));
   app.get('/api/v1/public/:slug',route((req)=>core.configBySlug(req.params.slug)));
   app.get('/api/v1/public/:slug/services',route((req)=>core.servicesBySlug(req.params.slug)));
