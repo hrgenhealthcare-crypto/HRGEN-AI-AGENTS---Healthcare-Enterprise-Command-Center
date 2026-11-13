@@ -37,6 +37,8 @@ test('real HTTP: two clients, protected routes, consented booking, restricted as
   assert.equal((await req('POST','/api/v1/workspace/bookings/'+bid+'/assign',{staffId:staff.id},tb)).status,404);
   assert.equal((await req('POST','/api/v1/workspace/bookings/'+bid+'/assign',{staffId:staff.id},ta)).status,200);
   const ts=(await login('staff@alpha.invalid','StrongStaffPassword!')).data.data.token;
+  assert.equal((await req('GET','/api/v1/workspace/bookings',undefined,ts)).data.data.length,1);
+  assert.equal((await req('GET','/api/v1/workspace/audit',undefined,ts)).status,403);
   assert.equal((await req('PATCH','/api/v1/workspace/bookings/'+bid,{status:'collected'},ts)).status,200);
   assert.deepEqual((await req('GET','/api/v1/workspace/bookings/'+bid+'/events',undefined,ta)).data.data.map(e=>e.kind),['requested','confirmed','assigned','collected']);
   assert.equal((await req('GET','/api/v1/workspace/export',undefined,ts)).status,403);
