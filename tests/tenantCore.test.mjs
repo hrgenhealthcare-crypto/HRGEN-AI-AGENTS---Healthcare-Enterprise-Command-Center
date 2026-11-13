@@ -71,7 +71,7 @@ test('staff can operate bookings and leads but cannot alter catalogue or brandin
   errCode(()=>x.core.addService(staff,undefined,{name:'CBC',priceInr:200}),'FORBIDDEN');
   errCode(()=>x.core.updateConfig(staff,undefined,{name:'Changed'}),'FORBIDDEN');
   errCode(()=>x.core.addUser(staff,undefined,{email:'bad@lab.invalid',password:'StrongPassword123!'}),'FORBIDDEN');
-  assert.equal(x.core.listAudit(staff).some(r=>r.action==='lead.create'),true);
+  errCode(()=>x.core.listAudit(staff),'FORBIDDEN');
 });
 test('lead stages cannot leak across tenants',t=>{
   const x=fixture(t);
@@ -227,4 +227,26 @@ test('SQLite backups pass integrity checks and detect corrupt snapshot',async t=
   writeFileSync(path.join(backupDir,'tenant-'+x.A.id+'.sqlite'),'corrupted');
   const corrupt=run('verify',backupDir);
   assert.notEqual(corrupt.status,0);
+});
+
+
+test('staff booking visibility and events are limited to their assignments',t=>{
+  const x=fixture(t);
+  const assigned=x.core.addUser(x.a,undefined,{email:'assigned@alpha.invalid',password:'StrongStaffPassword!'});
+  const other=x.core.addUser(x.a,undefined,{email:'other@alpha.invalid',password:'StrongStaffPassword!'});
+  const s1=x.core.session(x.core.login('assigned@alpha.invalid','StrongStaffPassword!').token);
+  const s2=x.core.session(x.core.login('other@alpha.invalid','StrongStaffPassword!').token);
+  const svc=x.core.addService(x.a,undefined,{name:'CBC',priceInr:200});
+  const b1=x.core.book('alpha-lab',{serviceId:svc.id,customerName:'Person 1',customerPhone:'9876543210',preferredDate:'2026-12-20',consent:true});
+  const b2=x.core.book('alpha-lab',{serviceId:svc.id,customerName:'Person 2',customerPhone:'9876543210',preferredDate:'2026-12-20',consent:true});
+  errCode(()=>x.core.setBookingStatus(s1,undefined,b1.id,'confirmed'),'FORBIDDEN');
+  assert.equal(x.core.bookings(s1).length,0);
+  for(const b of [b1,b2])x.core.setBookingStatus(x.a,undefined,b.id,'confirmed');
+  x.core.assignBooking(x.a,undefined,b1.id,assigned.id);
+  x.core.assignBooking(x.a,undefined,b2.id,other.id);
+  assert.deepEqual(x.core.bookings(s1).map(x=>x.id),[b1.id]);
+  assert.deepEqual(x.core.bookings(s2).map(x=>x.id),[b2.id]);
+  errCode(()=>x.core.bookingEvents(s1,undefined,b2.id),'FORBIDDEN');
+  errCode(()=>x.core.setBookingStatus(s1,undefined,b2.id,'collected'),'FORBIDDEN');
+  assert.equal(x.core.bookingEvents(s1,undefined,b1.id).length,3);
 });
