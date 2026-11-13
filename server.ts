@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { AgentPod } from './src/types';
 import { mountTenantRoutes } from './src/server/tenantRoutes.mjs';
+import { makeGeminiGenerator } from './src/server/aiStudio.mjs';
 
 dotenv.config();
 
@@ -21,10 +22,18 @@ app.use(express.json());
 // HRGen real client-core: separate client data, server-authorized roles, real bookings.
 // No default credentials. Mount only with explicit persistent storage configured.
 if (process.env.HRGEN_CORE_DB_DIR) {
+  // AI is opt-in and requires a real, server-side Gemini key. No simulated provider success.
+  const aiEnabled = process.env.HRGEN_AI_STUDIO_ENABLED === 'true' && Boolean(process.env.GEMINI_API_KEY);
+  const generateAi = aiEnabled ? makeGeminiGenerator({
+    apiKey: process.env.GEMINI_API_KEY,
+    model: process.env.HRGEN_AI_MODEL || 'gemini-2.5-flash',
+  }) : null;
   mountTenantRoutes(app, {
     dir: process.env.HRGEN_CORE_DB_DIR,
     bootstrapEmail: process.env.HRGEN_BOOTSTRAP_EMAIL,
     bootstrapPassword: process.env.HRGEN_BOOTSTRAP_PASSWORD,
+    aiEnabled,
+    generateAi,
   });
 }
 
