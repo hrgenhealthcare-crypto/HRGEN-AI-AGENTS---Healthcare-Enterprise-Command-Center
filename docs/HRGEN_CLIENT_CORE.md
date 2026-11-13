@@ -1,4 +1,4 @@
-# HRGen DigiTech — Reusable Real Client Core v1.0
+# HRGen DigiTech — Reusable Real Client Core v2.0
 
 **Status:** implemented and tested local backend module; **not deployed to a public production server**. This is real persistent CRUD, not a demo dataset. It is designed to be mounted into the existing HRGEN-AI-AGENTS Express server, not launched as a competing platform.
 
@@ -70,3 +70,11 @@ Tests use ephemeral temporary databases, synthetic names and phone numbers. Cove
 ## In scope / out of scope
 
 In: functional multi-client service booking and CRM foundation, reusable identity and role control, persistent records. Out: full LIMS, clinical reports, payments, outbound telecom, verified DPDP/NABL certification, production hosting, paid subscription entitlements, custom DNS, AI inference. Add these as vetted integrations rather than falsely marking them live.
+
+## v2 additions
+
+See `RELEASE_NOTES_V2.md` for the live booking privacy gate, staff assignment, timeline, restricted export, snapshot backup and migration.
+
+## v3 AI Growth Studio
+
+See `AI_GROWTH_STUDIO_V3.md`. AI is disabled by default. Configure `GEMINI_API_KEY` server-side and `HRGEN_AI_STUDIO_ENABLED=true` to opt in; no personal/patient data should ever be transmitted. Owner-only content drafts, token counts, separate per-client storage, approvals and failure handling. No automated sending, publishing or clinical AI. Old AI endpoints remain production-disabled.
