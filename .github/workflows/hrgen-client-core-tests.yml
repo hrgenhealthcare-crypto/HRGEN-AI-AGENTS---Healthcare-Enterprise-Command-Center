@@ -5,6 +5,8 @@ on:
       - 'server.ts'
       - 'src/server/**'
       - 'tests/tenantCore.test.mjs'
+      - 'tests/tenantHttp.test.mjs'
+      - 'scripts/core-backup.mjs'
       - '.github/workflows/hrgen-client-core-tests.yml'
   push:
     branches: [main]
@@ -30,4 +32,4 @@ jobs:
       - name: Build application
         run: bun run build
       - name: Test real tenant core and isolation
-        run: node --test tests/tenantCore.test.mjs
+        run: node --test tests/tenantCore.test.mjs tests/tenantHttp.test.mjs
