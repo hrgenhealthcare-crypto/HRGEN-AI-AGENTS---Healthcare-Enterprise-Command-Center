@@ -29,6 +29,8 @@ const tenantSchema = `
  CREATE TABLE IF NOT EXISTS services (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', price_inr INTEGER NOT NULL CHECK(price_inr >= 0), active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS bookings (id TEXT PRIMARY KEY, ref TEXT UNIQUE NOT NULL, service_id TEXT NOT NULL REFERENCES services(id), customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL, preferred_date TEXT NOT NULL, address TEXT NOT NULL DEFAULT '', consent_at TEXT NOT NULL, consent_version TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('new','confirmed','assigned','collected','cancelled')), created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL, company TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', stage TEXT NOT NULL CHECK(stage IN ('new','contacted','proposal_sent','won','lost')), created_at TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS booking_events (id TEXT PRIMARY KEY, booking_id TEXT NOT NULL REFERENCES bookings(id), kind TEXT NOT NULL, actor_id TEXT, detail TEXT NOT NULL DEFAULT '', at TEXT NOT NULL);
+ CREATE INDEX IF NOT EXISTS ix_booking_events_booking ON booking_events(booking_id,at);
  CREATE INDEX IF NOT EXISTS ix_bookings_created ON bookings(created_at DESC);
  CREATE INDEX IF NOT EXISTS ix_leads_created ON leads(created_at DESC);
 `;
@@ -50,12 +52,19 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     if (!bootstrapEmail || !bootstrapPassword) fail('BOOTSTRAP_REQUIRED','Set HRGEN_BOOTSTRAP_EMAIL and HRGEN_BOOTSTRAP_PASSWORD for first launch',503);
     db.prepare('INSERT INTO users(id,tenant_id,email,passhash,role,created_at) VALUES (?,NULL,?,?,?,?)').run(randomUUID(),email(bootstrapEmail),hashPassword(bootstrapPassword),'super_admin',now());
   }
+  // Safe forward migrations for existing v1 installations (do not discard client records).
+  const tenantColumns=db.prepare('PRAGMA table_info(tenants)').all().map(x=>x.name);
+  if (!tenantColumns.includes('privacy_url')) db.exec("ALTER TABLE tenants ADD COLUMN privacy_url TEXT NOT NULL DEFAULT ''");
+  if (!tenantColumns.includes('booking_enabled')) db.exec('ALTER TABLE tenants ADD COLUMN booking_enabled INTEGER NOT NULL DEFAULT 0');
   const cache=new Map();
   function tenantDb(tenantId) {
     if (!db.prepare('SELECT id FROM tenants WHERE id=?').get(tenantId)) fail('TENANT_NOT_FOUND','Unknown client workspace',404);
     if (!cache.has(tenantId)) {
       const td=openDatabase(path.join(tenDir,tenantId+'.sqlite'));
       td.exec(tenantSchema);
+      if (!td.prepare('PRAGMA table_info(bookings)').all().some(x=>x.name==='assigned_to')) {
+        td.exec('ALTER TABLE bookings ADD COLUMN assigned_to TEXT');
+      }
       cache.set(tenantId,td);
     }
     return cache.get(tenantId);
@@ -95,7 +104,7 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     const tid=randomUUID(), uid=randomUUID(), created=now();
     db.exec('BEGIN IMMEDIATE');
     try{
-      db.prepare('INSERT INTO tenants VALUES(?,?,?,?,?,?,?,?)').run(tid,s,n,c,p,cleaned(tagline,180),logoValue(logoUrl),created);
+      db.prepare('INSERT INTO tenants(id,slug,name,accent,phone,tagline,logo_url,created_at) VALUES(?,?,?,?,?,?,?,?)').run(tid,s,n,c,p,cleaned(tagline,180),logoValue(logoUrl),created);
       db.prepare('INSERT INTO users VALUES(?,?,?,?,?,?)').run(uid,tid,ownerMail,ownerHash,'owner',created);
       tenantDb(tid);
       db.exec('COMMIT');
@@ -103,10 +112,27 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     audit(actor,'tenant.create',tid,tid);
     return {id:tid,slug:s,name:n,accent:c,phone:p,logoUrl:logoValue(logoUrl),ownerEmail:ownerMail,bookingPath:'/book/'+s};
   }
-  function listTenants(actor){onlySuper(actor);return db.prepare('SELECT id,slug,name,accent,phone,tagline,logo_url AS logoUrl,created_at FROM tenants ORDER BY created_at DESC').all();}
-  function configBySlug(slug){const t=db.prepare('SELECT id,slug,name,accent,phone,tagline,logo_url AS logoUrl FROM tenants WHERE slug=?').get(slugValue(slug));if(!t)fail('TENANT_NOT_FOUND','No such business',404);return t;}
-  function config(user,requested){const id=selectedTenant(user,requested);const t=db.prepare('SELECT id,slug,name,accent,phone,tagline,logo_url AS logoUrl FROM tenants WHERE id=?').get(id);if(!t)fail('TENANT_NOT_FOUND','No such client',404);return t;}
-  function updateConfig(user,requested,data){onlyOwner(user);const t=config(user,requested);const name=required(data.name??t.name,'Name');const accent=colorValue(data.accent??t.accent);const p=data.phone ? phone(data.phone):'';const tagline=cleaned(data.tagline??t.tagline,180);const logoUrl=logoValue(data.logoUrl??t.logoUrl);db.prepare('UPDATE tenants SET name=?,accent=?,phone=?,tagline=?,logo_url=? WHERE id=?').run(name,accent,p,tagline,logoUrl,t.id);audit(user,'tenant.branding',t.id,t.id);return config(user,t.id);}
+  function listTenants(actor){onlySuper(actor);return db.prepare('SELECT id,slug,name,accent,phone,tagline,logo_url AS logoUrl,privacy_url AS privacyUrl,booking_enabled AS bookingEnabled,created_at FROM tenants ORDER BY created_at DESC').all();}
+  function configBySlug(slug){const t=db.prepare('SELECT id,slug,name,accent,phone,tagline,logo_url AS logoUrl,privacy_url AS privacyUrl,booking_enabled AS bookingEnabled FROM tenants WHERE slug=?').get(slugValue(slug));if(!t)fail('TENANT_NOT_FOUND','No such business',404);return t;}
+  function config(user,requested){const id=selectedTenant(user,requested);const t=db.prepare('SELECT id,slug,name,accent,phone,tagline,logo_url AS logoUrl,privacy_url AS privacyUrl,booking_enabled AS bookingEnabled FROM tenants WHERE id=?').get(id);if(!t)fail('TENANT_NOT_FOUND','No such client',404);return t;}
+  function safePrivacyUrl(value){
+    const v=cleaned(value,700);
+    if (!v) return '';
+    try { const u=new URL(v); if(u.protocol!=='https:'||u.username||u.password||!u.hostname.includes('.')) fail('INVALID_PRIVACY_URL','Use a valid public HTTPS privacy policy URL'); return u.toString(); }
+    catch(e){if(e instanceof CoreError)throw e;fail('INVALID_PRIVACY_URL','Use a valid public HTTPS privacy policy URL');}
+  }
+  function updateConfig(user,requested,data){
+    onlyOwner(user);const t=config(user,requested);
+    const name=required(data.name??t.name,'Name');const accent=colorValue(data.accent??t.accent);
+    const p=data.phone===undefined?t.phone:(data.phone ? phone(data.phone):'');
+    const tagline=cleaned(data.tagline??t.tagline,180),logoUrl=logoValue(data.logoUrl??t.logoUrl);
+    const privacyUrl=safePrivacyUrl(data.privacyUrl??t.privacyUrl);
+    const bookingEnabled=data.bookingEnabled===undefined?Boolean(t.bookingEnabled):data.bookingEnabled;
+    if (typeof bookingEnabled !== 'boolean') fail('INVALID_BOOKING_ENABLED','Booking enabled must be a boolean');
+    if(bookingEnabled&&!privacyUrl)fail('PRIVACY_POLICY_REQUIRED','Set an approved HTTPS privacy URL before accepting bookings',409);
+    db.prepare('UPDATE tenants SET name=?,accent=?,phone=?,tagline=?,logo_url=?,privacy_url=?,booking_enabled=? WHERE id=?').run(name,accent,p,tagline,logoUrl,privacyUrl,bookingEnabled?1:0,t.id);
+    audit(user,'tenant.branding',t.id,t.id);return config(user,t.id);
+  }
   function addUser(actor,requested,{email:userEmail,password,role='staff'}){
     onlyOwner(actor);const tid=selectedTenant(actor,requested);if(!['staff','owner'].includes(role))fail('INVALID_ROLE','Only staff or owner roles permitted');
     if(actor.role!=='super_admin' && role==='owner')fail('FORBIDDEN','Only founder can issue new owner accounts',403);
@@ -114,7 +140,7 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     db.prepare('INSERT INTO users VALUES(?,?,?,?,?,?)').run(id,tid,e,h,role,now());audit(actor,'user.create',id,tid);
     return {id,email:e,role,tenantId:tid};
   }
-  function servicesBySlug(slug){const t=configBySlug(slug);return tenantDb(t.id).prepare('SELECT id,name,description,price_inr AS priceInr FROM services WHERE active=1 ORDER BY created_at DESC').all();}
+  function servicesBySlug(slug){const t=configBySlug(slug);if(!t.bookingEnabled)return [];return tenantDb(t.id).prepare('SELECT id,name,description,price_inr AS priceInr FROM services WHERE active=1 ORDER BY created_at DESC').all();}
   function listServices(actor,requested){const id=selectedTenant(actor,requested);return tenantDb(id).prepare('SELECT id,name,description,price_inr AS priceInr,active,created_at AS createdAt FROM services ORDER BY created_at DESC').all();}
   function addService(actor,requested,{name,description='',priceInr}){
     onlyOwner(actor);const tid=selectedTenant(actor,requested),n=required(name,'Service name');
@@ -125,7 +151,7 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
   }
   function setServiceActive(actor,requested,id,active){onlyOwner(actor);const tid=selectedTenant(actor,requested);if(typeof active!=='boolean')fail('INVALID_ACTIVE','Boolean required');const res=tenantDb(tid).prepare('UPDATE services SET active=? WHERE id=?').run(active?1:0,id);if(!res.changes)fail('NOT_FOUND','Service not found',404);audit(actor,'service.status',id,tid);return {id,active};}
   function book(slug,{serviceId,customerName,customerPhone,preferredDate,address='',consent}){
-    const t=configBySlug(slug), td=tenantDb(t.id);
+    const t=configBySlug(slug);if(!t.bookingEnabled||!t.privacyUrl)fail('BOOKING_DISABLED','This business is not accepting online bookings',409);const td=tenantDb(t.id);
     const svc=td.prepare('SELECT id FROM services WHERE id=? AND active=1').get(serviceId);
     if(!svc)fail('NOT_FOUND','Service unavailable',404);
     if(consent!==true)fail('CONSENT_REQUIRED','Consent required to process booking details');
@@ -134,16 +160,66 @@ export function createTenantCore({dir, bootstrapEmail, bootstrapPassword} = {}) 
     const todayIST=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
     if(date<todayIST)fail('INVALID_DATE','Preferred date cannot be in the past');
     const id=randomUUID(), ref='HRG-'+randomBytes(6).toString('hex').toUpperCase(),stamp=now();
-    td.prepare('INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,ref,serviceId,required(customerName,'Customer name'),phone(customerPhone),date,cleaned(address,350),stamp,'booking-consent-v1','new',stamp);
+    td.prepare('INSERT INTO bookings(id,ref,service_id,customer_name,customer_phone,preferred_date,address,consent_at,consent_version,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,ref,serviceId,required(customerName,'Customer name'),phone(customerPhone),date,cleaned(address,350),stamp,'booking-consent-v1','new',stamp);
+    td.prepare('INSERT INTO booking_events(id,booking_id,kind,actor_id,detail,at) VALUES(?,?,?,?,?,?)').run(randomUUID(),id,'requested',null,'Consent: booking-consent-v1; '+t.privacyUrl,stamp);
     audit(null,'booking.public_create',id,t.id);
     return {id,reference:ref,status:'new'};
   }
-  function bookings(actor,requested){const tid=selectedTenant(actor,requested);return tenantDb(tid).prepare(`SELECT b.id,b.ref AS reference,s.name AS service,b.customer_name AS customerName,b.customer_phone AS customerPhone,b.preferred_date AS preferredDate,b.address,b.status,b.created_at AS createdAt FROM bookings b JOIN services s ON s.id=b.service_id ORDER BY b.created_at DESC LIMIT 200`).all();}
-  function setBookingStatus(actor,requested,id,status){const tid=selectedTenant(actor,requested);if(!['new','confirmed','assigned','collected','cancelled'].includes(status))fail('INVALID_STATUS','Unsupported booking status');const res=tenantDb(tid).prepare('UPDATE bookings SET status=? WHERE id=?').run(status,id);if(!res.changes)fail('NOT_FOUND','Booking not found',404);audit(actor,'booking.status',id,tid);return {id,status};}
+  function bookings(actor,requested){const tid=selectedTenant(actor,requested);return tenantDb(tid).prepare(`SELECT b.id,b.ref AS reference,s.name AS service,b.customer_name AS customerName,b.customer_phone AS customerPhone,b.preferred_date AS preferredDate,b.address,b.status,b.assigned_to AS assignedTo,b.created_at AS createdAt FROM bookings b JOIN services s ON s.id=b.service_id ORDER BY b.created_at DESC LIMIT 200`).all();}
+  // Deliberately restrict state transitions: collection requires an assigned staff member.
+  const transitions={new:['confirmed','cancelled'],confirmed:['cancelled'],assigned:['collected','cancelled'],collected:[],cancelled:[]};
+  function setBookingStatus(actor,requested,id,status){
+    const tid=selectedTenant(actor,requested);if(!['confirmed','collected','cancelled'].includes(status))fail('INVALID_STATUS','Unsupported booking transition');
+    const td=tenantDb(tid),old=td.prepare('SELECT id,status,assigned_to AS assignedTo FROM bookings WHERE id=?').get(id);
+    if(!old)fail('NOT_FOUND','Booking not found',404);
+    if(!transitions[old.status]?.includes(status))fail('INVALID_TRANSITION','Booking status transition is not allowed',409);
+    if(old.status==='assigned'&&actor.role==='staff'&&old.assignedTo!==actor.id)fail('FORBIDDEN','Only assigned staff may complete or cancel this booking',403);
+    const result=td.prepare('UPDATE bookings SET status=? WHERE id=? AND status=?').run(status,id,old.status);
+    if(!result.changes)fail('CONFLICT','Booking changed; reload',409);
+    td.prepare('INSERT INTO booking_events VALUES(?,?,?,?,?,?)').run(randomUUID(),id,status,actor.id,'',now());
+    audit(actor,'booking.status',id,tid);return {id,status};
+  }
+  function listStaff(actor,requested){
+    onlyOwner(actor);const tid=selectedTenant(actor,requested);
+    return db.prepare("SELECT id,email,role FROM users WHERE tenant_id=? AND role='staff' ORDER BY email").all(tid);
+  }
+  function assignBooking(actor,requested,bookingId,staffId){
+    onlyOwner(actor);const tid=selectedTenant(actor,requested),td=tenantDb(tid);
+    const staff=db.prepare("SELECT id FROM users WHERE id=? AND tenant_id=? AND role='staff'").get(staffId,tid);
+    if(!staff)fail('STAFF_NOT_FOUND','Select staff from this client',404);
+    const booking=td.prepare('SELECT status FROM bookings WHERE id=?').get(bookingId);
+    if(!booking)fail('NOT_FOUND','Booking not found',404);
+    if(booking.status!=='confirmed')fail('INVALID_TRANSITION','Confirm request before assigning staff',409);
+    const result=td.prepare("UPDATE bookings SET assigned_to=?,status='assigned' WHERE id=? AND status='confirmed'").run(staffId,bookingId);
+    if(!result.changes)fail('CONFLICT','Booking changed; reload',409);
+    td.prepare('INSERT INTO booking_events VALUES(?,?,?,?,?,?)').run(randomUUID(),bookingId,'assigned',actor.id,staffId,now());
+    audit(actor,'booking.assigned',bookingId,tid);return {id:bookingId,status:'assigned',assignedTo:staffId};
+  }
+  function bookingEvents(actor,requested,bookingId){
+    const tid=selectedTenant(actor,requested),td=tenantDb(tid);
+    const booking=td.prepare('SELECT id FROM bookings WHERE id=?').get(bookingId);
+    if(!booking)fail('NOT_FOUND','Booking not found',404);
+    return td.prepare('SELECT kind,actor_id AS actorId,at FROM booking_events WHERE booking_id=? ORDER BY at,id').all(bookingId);
+  }
   function listLeads(actor,requested){const tid=selectedTenant(actor,requested);return tenantDb(tid).prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT 200').all();}
   function addLead(actor,requested,{name,phone:mobile,company='',note=''}){const tid=selectedTenant(actor,requested);const lead={id:randomUUID(),name:required(name,'Lead name'),phone:phone(mobile),company:cleaned(company,150),note:cleaned(note,600),stage:'new',created_at:now()};tenantDb(tid).prepare('INSERT INTO leads VALUES (?,?,?,?,?,?,?)').run(lead.id,lead.name,lead.phone,lead.company,lead.note,lead.stage,lead.created_at);audit(actor,'lead.create',lead.id,tid);return lead;}
   function setLeadStage(actor,requested,id,stage){if(!['new','contacted','proposal_sent','won','lost'].includes(stage))fail('INVALID_STAGE','Unsupported lead stage');const tid=selectedTenant(actor,requested);const res=tenantDb(tid).prepare('UPDATE leads SET stage=? WHERE id=?').run(stage,id);if(!res.changes)fail('NOT_FOUND','Lead not found',404);audit(actor,'lead.stage',id,tid);return {id,stage};}
+  function exportTenant(actor,requested){
+    onlyOwner(actor);const tid=selectedTenant(actor,requested),td=tenantDb(tid);
+    const snapshot={
+      format:'hrgen-client-export-v1',createdAt:now(),
+      client:config(actor,tid),
+      services:td.prepare('SELECT * FROM services ORDER BY created_at').all(),
+      bookings:td.prepare('SELECT * FROM bookings ORDER BY created_at').all(),
+      bookingEvents:td.prepare('SELECT * FROM booking_events ORDER BY at').all(),
+      leads:td.prepare('SELECT * FROM leads ORDER BY created_at').all(),
+      staff:listStaff(actor,tid),
+      audit:db.prepare('SELECT * FROM audit WHERE tenant_id=? ORDER BY at').all(tid)
+    };
+    audit(actor,'tenant.export',tid,tid);
+    return snapshot;
+  }
   function listAudit(actor,requested){const tid=selectedTenant(actor,requested);return db.prepare('SELECT action,target_id AS targetId,at FROM audit WHERE tenant_id=? ORDER BY at DESC LIMIT 100').all(tid);}
   function close(){for(const t of cache.values())t.close();db.close();}
-  return {login,session,logout,changePassword,createTenant,listTenants,configBySlug,config,updateConfig,addUser,servicesBySlug,listServices,addService,setServiceActive,book,bookings,setBookingStatus,listLeads,addLead,setLeadStage,listAudit,close};
+  return {login,session,logout,changePassword,createTenant,listTenants,configBySlug,config,updateConfig,addUser,listStaff,servicesBySlug,listServices,addService,setServiceActive,book,bookings,setBookingStatus,assignBooking,bookingEvents,listLeads,addLead,setLeadStage,listAudit,exportTenant,close};
 }
